@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { Plus, ZoomIn, ZoomOut } from 'lucide-react';
 import { NoteColor, NOTE_COLORS } from '@/types/canvas';
 
 interface CanvasToolbarProps {
@@ -55,9 +55,6 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
         </span>
         <button onClick={onZoomIn} className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
           <ZoomIn size={16} />
-        </button>
-        <button onClick={onResetView} className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground" title="Reset view">
-          <Maximize2 size={16} />
         </button>
       </div>
     </div>
