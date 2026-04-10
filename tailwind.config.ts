@@ -47,6 +47,22 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        canvas: {
+          bg: "hsl(var(--canvas-bg))",
+          grid: "hsl(var(--canvas-grid))",
+          "grid-major": "hsl(var(--canvas-grid-major))",
+        },
+        note: {
+          yellow: "hsl(var(--note-yellow))",
+          blue: "hsl(var(--note-blue))",
+          green: "hsl(var(--note-green))",
+          pink: "hsl(var(--note-pink))",
+          purple: "hsl(var(--note-purple))",
+        },
+        toolbar: {
+          bg: "hsl(var(--toolbar-bg))",
+          border: "hsl(var(--toolbar-border))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
