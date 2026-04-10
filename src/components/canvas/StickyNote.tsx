@@ -11,18 +11,21 @@ interface StickyNoteProps {
   onResize: (w: number, h: number) => void;
   onUpdate: (updates: Partial<Note>) => void;
   onDelete: () => void;
+  onNoteWheelCapture: (e: WheelEvent, hasOverflow: boolean) => void;
 }
 
 export const StickyNote: React.FC<StickyNoteProps> = ({
-  note, scale, isSelected, onSelect, onMove, onResize, onUpdate, onDelete,
+  note, scale, isSelected, onSelect, onMove, onResize, onUpdate, onDelete, onNoteWheelCapture,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const textRef = useRef<HTMLTextAreaElement>(null);
+  const noteRef = useRef<HTMLDivElement>(null);
   const dragStart = useRef({ x: 0, y: 0, noteX: 0, noteY: 0 });
   const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0 });
+  const dragThreshold = useRef({ startX: 0, startY: 0, moved: false });
 
   useEffect(() => {
     if (isEditing && textRef.current) {
@@ -38,26 +41,67 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
     }
   }, [isSelected, note.content]);
 
+  // Smart scroll: capture wheel events on the note element
+  useEffect(() => {
+    const el = noteRef.current;
+    if (!el) return;
+    const handleWheel = (e: WheelEvent) => {
+      const textarea = textRef.current;
+      if (!textarea) {
+        onNoteWheelCapture(e, false);
+        return;
+      }
+      const hasOverflow = textarea.scrollHeight > textarea.clientHeight;
+      if (hasOverflow && isEditing) {
+        // Check if we can still scroll in the direction
+        const atTop = textarea.scrollTop <= 0 && e.deltaY < 0;
+        const atBottom = textarea.scrollTop + textarea.clientHeight >= textarea.scrollHeight - 1 && e.deltaY > 0;
+        if (!atTop && !atBottom) {
+          e.stopPropagation();
+          e.preventDefault();
+          textarea.scrollTop += e.deltaY;
+          return;
+        }
+      }
+      // Pass through to canvas
+      onNoteWheelCapture(e, false);
+    };
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, [isEditing, onNoteWheelCapture]);
+
+  // Drag: always draggable via mousedown, but use threshold to distinguish from click
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (isEditing || (e.target as HTMLElement).closest('.note-actions')) return;
+    if ((e.target as HTMLElement).closest('.note-actions')) return;
     e.stopPropagation();
     onSelect();
-    setIsDragging(true);
+    dragThreshold.current = { startX: e.clientX, startY: e.clientY, moved: false };
     dragStart.current = { x: e.clientX, y: e.clientY, noteX: note.x, noteY: note.y };
-  }, [isEditing, note.x, note.y, onSelect]);
+    setIsDragging(true);
+  }, [note.x, note.y, onSelect]);
 
   useEffect(() => {
     if (!isDragging) return;
     const handleMove = (e: MouseEvent) => {
       const dx = (e.clientX - dragStart.current.x) / scale;
       const dy = (e.clientY - dragStart.current.y) / scale;
+      if (!dragThreshold.current.moved) {
+        const dist = Math.abs(e.clientX - dragThreshold.current.startX) + Math.abs(e.clientY - dragThreshold.current.startY);
+        if (dist < 4) return; // haven't moved enough
+        dragThreshold.current.moved = true;
+        // Blur textarea when starting to drag
+        if (isEditing && textRef.current) {
+          textRef.current.blur();
+          setIsEditing(false);
+        }
+      }
       onMove(dragStart.current.noteX + dx, dragStart.current.noteY + dy);
     };
     const handleUp = () => setIsDragging(false);
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleUp);
     return () => { window.removeEventListener('mousemove', handleMove); window.removeEventListener('mouseup', handleUp); };
-  }, [isDragging, scale, onMove]);
+  }, [isDragging, scale, onMove, isEditing]);
 
   useEffect(() => {
     if (!isResizing) return;
@@ -85,9 +129,10 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
 
   return (
     <div
+      ref={noteRef}
       className={`absolute select-none transition-shadow duration-200 rounded-xl ${NOTE_COLOR_MAP[note.color]} ${
         isSelected ? `ring-2 ${NOTE_COLOR_RING_MAP[note.color]} shadow-lg` : 'shadow-md'
-      } ${isDragging ? 'cursor-grabbing z-50 shadow-xl' : 'cursor-grab z-10'}`}
+      } ${isDragging && dragThreshold.current.moved ? 'cursor-grabbing z-50 shadow-xl' : 'cursor-grab z-10'}`}
       style={{
         left: note.x,
         top: note.y,
@@ -138,7 +183,10 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
           onFocus={() => { setIsEditing(true); onSelect(); }}
           onBlur={() => setIsEditing(false)}
           placeholder="Type something..."
-          className="w-full h-full bg-transparent resize-none outline-none text-sm text-foreground/80 placeholder:text-foreground/30 leading-relaxed"
+          className={`w-full h-full bg-transparent resize-none outline-none text-sm text-foreground/80 placeholder:text-foreground/30 leading-relaxed ${
+            isEditing ? 'cursor-text' : 'cursor-grab pointer-events-none'
+          }`}
+          style={{ overflow: isEditing ? 'auto' : 'hidden' }}
         />
       </div>
 

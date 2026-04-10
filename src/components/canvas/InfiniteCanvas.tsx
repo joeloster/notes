@@ -9,6 +9,8 @@ export const InfiniteCanvas: React.FC = () => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const isPanning = useRef(false);
   const panStart = useRef({ x: 0, y: 0 });
+  const mouseDownPos = useRef({ x: 0, y: 0 });
+  const hasPanned = useRef(false);
   const [canvasSize, setCanvasSize] = useState({ w: window.innerWidth, h: window.innerHeight });
 
   const {
@@ -25,21 +27,31 @@ export const InfiniteCanvas: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Wheel zoom
+  // Wheel zoom — faster sensitivity
   useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
       if (e.ctrlKey || e.metaKey) {
-        zoom(-e.deltaY * 0.002, e.clientX, e.clientY);
+        // Pinch zoom — faster
+        zoom(-e.deltaY * 0.008, e.clientX, e.clientY);
       } else {
-        pan(-e.deltaX, -e.deltaY);
+        // Scroll to zoom (no modifier) — use deltaY for zoom
+        zoom(-e.deltaY * 0.003, e.clientX, e.clientY);
       }
     };
     el.addEventListener('wheel', handleWheel, { passive: false });
     return () => el.removeEventListener('wheel', handleWheel);
-  }, [zoom, pan]);
+  }, [zoom]);
+
+  // Handle wheel events from notes (pass-through when no overflow)
+  const handleNoteWheelCapture = useCallback((e: WheelEvent, _hasOverflow: boolean) => {
+    // Let it zoom the canvas
+    e.preventDefault();
+    e.stopPropagation();
+    zoom(-e.deltaY * 0.003, e.clientX, e.clientY);
+  }, [zoom]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -67,14 +79,20 @@ export const InfiniteCanvas: React.FC = () => {
   }), [view]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.target !== canvasRef.current?.firstChild) return;
+    // Only start panning if clicking on the canvas background (grid layer or transform container)
+    const target = e.target as HTMLElement;
+    if (target !== canvasRef.current && !target.classList.contains('canvas-grid') && !target.classList.contains('canvas-transform')) return;
     isPanning.current = true;
+    hasPanned.current = false;
+    mouseDownPos.current = { x: e.clientX, y: e.clientY };
     panStart.current = { x: e.clientX - view.x, y: e.clientY - view.y };
     setSelectedNoteId(null);
   }, [view.x, view.y, setSelectedNoteId]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isPanning.current) return;
+    const dist = Math.abs(e.clientX - mouseDownPos.current.x) + Math.abs(e.clientY - mouseDownPos.current.y);
+    if (dist > 3) hasPanned.current = true;
     setView(prev => ({
       ...prev,
       x: e.clientX - panStart.current.x,
@@ -87,7 +105,10 @@ export const InfiniteCanvas: React.FC = () => {
   }, []);
 
   const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    if (e.target !== canvasRef.current?.firstChild) return;
+    // Only create note if clicking on canvas background and didn't pan
+    const target = e.target as HTMLElement;
+    if (target !== canvasRef.current && !target.classList.contains('canvas-grid') && !target.classList.contains('canvas-transform')) return;
+    if (hasPanned.current) return;
     const pos = screenToCanvas(e.clientX, e.clientY);
     addNote(pos.x, pos.y);
   }, [screenToCanvas, addNote]);
@@ -118,7 +139,7 @@ export const InfiniteCanvas: React.FC = () => {
     >
       {/* Grid background */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-auto canvas-grid"
         style={{
           backgroundImage: `
             linear-gradient(hsl(var(--canvas-grid) / 0.5) 1px, transparent 1px),
@@ -133,6 +154,7 @@ export const InfiniteCanvas: React.FC = () => {
 
       {/* Transform container */}
       <div
+        className="canvas-transform"
         style={{
           transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
           transformOrigin: '0 0',
@@ -149,6 +171,7 @@ export const InfiniteCanvas: React.FC = () => {
             onResize={(w, h) => resizeNote(note.id, w, h)}
             onUpdate={(updates) => updateNote(note.id, updates)}
             onDelete={() => deleteNote(note.id)}
+            onNoteWheelCapture={handleNoteWheelCapture}
           />
         ))}
       </div>
