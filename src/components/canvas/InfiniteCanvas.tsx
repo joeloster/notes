@@ -3,7 +3,9 @@ import { useCanvasState } from '@/hooks/useCanvasState';
 import { StickyNote } from './StickyNote';
 import { CanvasToolbar } from './CanvasToolbar';
 import { MiniMap } from './MiniMap';
+import { NoteEditorToolbar } from './NoteEditorToolbar';
 import { GRID_SIZE } from '@/types/canvas';
+import { Editor } from '@tiptap/react';
 
 export const InfiniteCanvas: React.FC = () => {
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -12,6 +14,8 @@ export const InfiniteCanvas: React.FC = () => {
   const mouseDownPos = useRef({ x: 0, y: 0 });
   const hasPanned = useRef(false);
   const [canvasSize, setCanvasSize] = useState({ w: window.innerWidth, h: window.innerHeight });
+  const [activeEditor, setActiveEditor] = useState<Editor | null>(null);
+  const [isNoteEditing, setIsNoteEditing] = useState(false);
 
   const {
     notes, view, selectedNoteId, activeColor,
@@ -20,24 +24,25 @@ export const InfiniteCanvas: React.FC = () => {
     zoom, resetView, pan,
   } = useCanvasState();
 
-  // Resize handler
+  const handleEditingChange = useCallback((editing: boolean, editor: Editor | null) => {
+    setIsNoteEditing(editing);
+    setActiveEditor(editing ? editor : null);
+  }, []);
+
   useEffect(() => {
     const handleResize = () => setCanvasSize({ w: window.innerWidth, h: window.innerHeight });
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Wheel zoom — faster sensitivity
   useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
       if (e.ctrlKey || e.metaKey) {
-        // Pinch zoom — faster
         zoom(-e.deltaY * 0.008, e.clientX, e.clientY);
       } else {
-        // Scroll to zoom (no modifier) — use deltaY for zoom
         zoom(-e.deltaY * 0.003, e.clientX, e.clientY);
       }
     };
@@ -45,25 +50,22 @@ export const InfiniteCanvas: React.FC = () => {
     return () => el.removeEventListener('wheel', handleWheel);
   }, [zoom]);
 
-  // Handle wheel events from notes (pass-through when no overflow)
   const handleNoteWheelCapture = useCallback((e: WheelEvent, _hasOverflow: boolean) => {
-    // Let it zoom the canvas
     e.preventDefault();
     e.stopPropagation();
     zoom(-e.deltaY * 0.003, e.clientX, e.clientY);
   }, [zoom]);
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).tagName === 'TEXTAREA') return;
+      if ((e.target as HTMLElement).closest('.ProseMirror')) return;
       if (e.key === 'n' || e.key === 'N') {
         const cx = (canvasSize.w / 2 - view.x) / view.scale;
         const cy = (canvasSize.h / 2 - view.y) / view.scale;
         addNote(cx, cy);
       }
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedNoteId && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+        if (selectedNoteId) {
           deleteNote(selectedNoteId);
         }
       }
@@ -79,7 +81,6 @@ export const InfiniteCanvas: React.FC = () => {
   }), [view]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    // Only start panning if clicking on the canvas background (grid layer or transform container)
     const target = e.target as HTMLElement;
     if (target !== canvasRef.current && !target.classList.contains('canvas-grid') && !target.classList.contains('canvas-transform')) return;
     isPanning.current = true;
@@ -105,7 +106,6 @@ export const InfiniteCanvas: React.FC = () => {
   }, []);
 
   const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    // Only create note if clicking on canvas background and didn't pan
     const target = e.target as HTMLElement;
     if (target !== canvasRef.current && !target.classList.contains('canvas-grid') && !target.classList.contains('canvas-transform')) return;
     if (hasPanned.current) return;
@@ -137,6 +137,9 @@ export const InfiniteCanvas: React.FC = () => {
       onMouseLeave={handleMouseUp}
       onDoubleClick={handleDoubleClick}
     >
+      {/* Floating text toolbar */}
+      <NoteEditorToolbar editor={activeEditor} visible={isNoteEditing} />
+
       {/* Grid background */}
       <div
         className="absolute inset-0 pointer-events-auto canvas-grid"
@@ -172,6 +175,7 @@ export const InfiniteCanvas: React.FC = () => {
             onUpdate={(updates) => updateNote(note.id, updates)}
             onDelete={() => deleteNote(note.id)}
             onNoteWheelCapture={handleNoteWheelCapture}
+            onEditingChange={handleEditingChange}
           />
         ))}
       </div>
