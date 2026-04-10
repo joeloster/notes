@@ -52,8 +52,8 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
         return;
       }
       const hasOverflow = textarea.scrollHeight > textarea.clientHeight;
-      if (hasOverflow && isEditing) {
-        // Check if we can still scroll in the direction
+      // When note is selected and has scrollable content, scroll the note
+      if (hasOverflow && isSelected) {
         const atTop = textarea.scrollTop <= 0 && e.deltaY < 0;
         const atBottom = textarea.scrollTop + textarea.clientHeight >= textarea.scrollHeight - 1 && e.deltaY > 0;
         if (!atTop && !atBottom) {
@@ -63,12 +63,12 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
           return;
         }
       }
-      // Pass through to canvas
+      // Not scrollable or at edge → zoom canvas
       onNoteWheelCapture(e, false);
     };
     el.addEventListener('wheel', handleWheel, { passive: false });
     return () => el.removeEventListener('wheel', handleWheel);
-  }, [isEditing, onNoteWheelCapture]);
+  }, [isSelected, onNoteWheelCapture]);
 
   // Drag: always draggable via mousedown, but use threshold to distinguish from click
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
