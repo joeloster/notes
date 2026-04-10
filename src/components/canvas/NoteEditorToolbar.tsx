@@ -1,6 +1,6 @@
 import React from 'react';
 import { Editor } from '@tiptap/react';
-import { Bold, List, ListOrdered, CheckSquare, Type } from 'lucide-react';
+import { Bold, List, ListOrdered, CheckSquare } from 'lucide-react';
 
 interface NoteEditorToolbarProps {
   editor: Editor | null;
@@ -8,9 +8,9 @@ interface NoteEditorToolbarProps {
 }
 
 const TEXT_SIZES = [
-  { label: 'S', value: 'small', class: 'text-xs' },
-  { label: 'M', value: 'medium', class: 'text-sm' },
-  { label: 'L', value: 'large', class: 'text-base' },
+  { label: 'Small', value: 'small' },
+  { label: 'Medium', value: 'medium' },
+  { label: 'Large', value: 'large' },
 ] as const;
 
 export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({ editor, visible }) => {
@@ -20,7 +20,6 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({ editor, vi
 
   const setFontSize = (size: string) => {
     if (size === 'medium') {
-      // Remove custom font size (default)
       editor.chain().focus().unsetMark('textStyle').run();
     } else {
       editor.chain().focus().setMark('textStyle', { fontSize: size }).run();
@@ -32,12 +31,11 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({ editor, vi
       <div className="flex items-center gap-1 px-3 py-2 rounded-xl bg-card/95 backdrop-blur-md shadow-lg border border-border">
         {/* Text Size */}
         <div className="flex items-center gap-0.5 mr-1">
-          <Type size={14} className="text-muted-foreground mr-1" />
           {TEXT_SIZES.map(s => (
             <button
               key={s.value}
               onMouseDown={(e) => { e.preventDefault(); setFontSize(s.value); }}
-              className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
                 currentSize === s.value
                   ? 'bg-primary text-primary-foreground'
                   : 'text-foreground/70 hover:bg-muted'

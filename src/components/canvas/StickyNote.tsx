@@ -59,19 +59,16 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
     const el = noteRef.current;
     if (!el) return;
     const handleWheel = (e: WheelEvent) => {
+      if (!isSelected) return; // let canvas handle it
       const editorEl = el.querySelector('.ProseMirror');
-      if (!editorEl) {
-        onNoteWheelCapture(e, false);
-        return;
-      }
-      const hasOverflow = editorEl.scrollHeight > editorEl.clientHeight;
-      if (hasOverflow && isSelected) {
+      const hasOverflow = editorEl ? editorEl.scrollHeight > editorEl.clientHeight : false;
+      if (hasOverflow) {
         e.stopPropagation();
         e.preventDefault();
-        editorEl.scrollTop += e.deltaY;
+        if (editorEl) editorEl.scrollTop += e.deltaY;
         return;
       }
-      onNoteWheelCapture(e, false);
+      // Not scrollable — let canvas zoom via fallthrough (don't stop propagation)
     };
     el.addEventListener('wheel', handleWheel, { passive: false });
     return () => el.removeEventListener('wheel', handleWheel);
