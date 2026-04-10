@@ -71,11 +71,14 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     ],
     content,
     editable: isEditing,
-    onUpdate: ({ editor }) => {
-      onUpdate(editor.getHTML());
+    onUpdate: ({ editor: e }) => {
+      onUpdate(e.getHTML());
     },
     onFocus: () => onFocus(),
     onBlur: () => onBlur(),
+    onTransaction: () => {
+      // Force re-render on every transaction so toolbar reflects current state
+    },
     editorProps: {
       attributes: {
         class: 'outline-none h-full text-sm text-foreground/80 leading-relaxed',
