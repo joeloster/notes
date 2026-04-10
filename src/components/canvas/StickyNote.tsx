@@ -52,18 +52,14 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
         return;
       }
       const hasOverflow = textarea.scrollHeight > textarea.clientHeight;
-      // When note is selected and has scrollable content, scroll the note
       if (hasOverflow && isSelected) {
-        const atTop = textarea.scrollTop <= 0 && e.deltaY < 0;
-        const atBottom = textarea.scrollTop + textarea.clientHeight >= textarea.scrollHeight - 1 && e.deltaY > 0;
-        if (!atTop && !atBottom) {
-          e.stopPropagation();
-          e.preventDefault();
-          textarea.scrollTop += e.deltaY;
-          return;
-        }
+        // Fully capture ALL scroll input — never let canvas zoom
+        e.stopPropagation();
+        e.preventDefault();
+        textarea.scrollTop += e.deltaY;
+        return;
       }
-      // Not scrollable or at edge → zoom canvas
+      // Not scrollable → zoom canvas
       onNoteWheelCapture(e, false);
     };
     el.addEventListener('wheel', handleWheel, { passive: false });
