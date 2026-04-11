@@ -13,12 +13,11 @@ interface StickyNoteProps {
   onResize: (w: number, h: number) => void;
   onUpdate: (updates: Partial<Note>) => void;
   onDelete: () => void;
-  onNoteWheelCapture: (e: WheelEvent, hasOverflow: boolean) => void;
   onEditingChange: (editing: boolean, editor: Editor | null) => void;
 }
 
 export const StickyNote: React.FC<StickyNoteProps> = ({
-  note, scale, isSelected, onSelect, onMove, onResize, onUpdate, onDelete, onNoteWheelCapture, onEditingChange,
+  note, scale, isSelected, onSelect, onMove, onResize, onUpdate, onDelete, onEditingChange,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -58,21 +57,26 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
   useEffect(() => {
     const el = noteRef.current;
     if (!el) return;
+
     const handleWheel = (e: WheelEvent) => {
-      if (!isSelected) return; // let canvas handle it
-      const editorEl = el.querySelector('.ProseMirror');
-      const hasOverflow = editorEl ? editorEl.scrollHeight > editorEl.clientHeight : false;
-      if (hasOverflow) {
-        e.stopPropagation();
-        e.preventDefault();
-        if (editorEl) editorEl.scrollTop += e.deltaY;
-        return;
+      if (!isSelected) return;
+
+      const scrollContainer = el.querySelector('[data-note-editor-scroll="true"]') as HTMLDivElement | null;
+      const hasOverflow = scrollContainer ? scrollContainer.scrollHeight > scrollContainer.clientHeight + 1 : false;
+
+      if (!scrollContainer || !hasOverflow) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      scrollContainer.scrollTop += e.deltaY;
+      if (e.deltaX !== 0) {
+        scrollContainer.scrollLeft += e.deltaX;
       }
-      // Not scrollable — let canvas zoom via fallthrough (don't stop propagation)
     };
+
     el.addEventListener('wheel', handleWheel, { passive: false });
     return () => el.removeEventListener('wheel', handleWheel);
-  }, [isSelected, onNoteWheelCapture]);
+  }, [isSelected]);
 
   // Drag
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -183,6 +187,7 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
         <NoteEditor
           content={note.content}
           isEditing={isEditing}
+          isFocused={isSelected || isEditing}
           onUpdate={(html) => onUpdate({ content: html })}
           onFocus={() => { setIsEditing(true); onSelect(); }}
           onBlur={() => setIsEditing(false)}

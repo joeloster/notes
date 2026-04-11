@@ -41,6 +41,7 @@ const FontSize = Extension.create({
 interface NoteEditorProps {
   content: string;
   isEditing: boolean;
+  isFocused: boolean;
   onUpdate: (html: string) => void;
   onFocus: () => void;
   onBlur: () => void;
@@ -50,6 +51,7 @@ interface NoteEditorProps {
 export const NoteEditor: React.FC<NoteEditorProps> = ({
   content,
   isEditing,
+  isFocused,
   onUpdate,
   onFocus,
   onBlur,
@@ -76,9 +78,6 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     },
     onFocus: () => onFocus(),
     onBlur: () => onBlur(),
-    onTransaction: () => {
-      // Force re-render on every transaction so toolbar reflects current state
-    },
     editorProps: {
       attributes: {
         class: 'outline-none h-full text-sm text-foreground/80 leading-relaxed',
@@ -106,8 +105,13 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   return (
     <EditorContent
       editor={editor}
-      className={`w-full h-full ${isEditing ? 'cursor-text' : 'cursor-grab pointer-events-none'}`}
-      style={{ overflow: isEditing ? 'auto' : 'hidden' }}
+      data-note-editor-scroll="true"
+      className={`note-editor-scroll w-full h-full ${isEditing ? 'cursor-text' : 'cursor-grab pointer-events-none'}`}
+      style={{
+        overflowX: 'hidden',
+        overflowY: isEditing || isFocused ? 'auto' : 'hidden',
+        overscrollBehavior: isFocused ? 'contain' : 'auto',
+      }}
     />
   );
 };
