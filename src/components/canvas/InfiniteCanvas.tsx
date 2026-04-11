@@ -50,12 +50,6 @@ export const InfiniteCanvas: React.FC = () => {
     return () => el.removeEventListener('wheel', handleWheel);
   }, [zoom]);
 
-  const handleNoteWheelCapture = useCallback((e: WheelEvent, _hasOverflow: boolean) => {
-    e.preventDefault();
-    e.stopPropagation();
-    zoom(-e.deltaY * 0.003, e.clientX, e.clientY);
-  }, [zoom]);
-
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).closest('.ProseMirror')) return;
@@ -174,7 +168,6 @@ export const InfiniteCanvas: React.FC = () => {
             onResize={(w, h) => resizeNote(note.id, w, h)}
             onUpdate={(updates) => updateNote(note.id, updates)}
             onDelete={() => deleteNote(note.id)}
-            onNoteWheelCapture={handleNoteWheelCapture}
             onEditingChange={handleEditingChange}
           />
         ))}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Editor } from '@tiptap/react';
 import { Bold, List, ListOrdered, CheckSquare } from 'lucide-react';
 
@@ -13,17 +13,71 @@ const TEXT_SIZES = [
   { label: 'Large', value: 'large' },
 ] as const;
 
+type TextSize = (typeof TEXT_SIZES)[number]['value'];
+
+interface ToolbarState {
+  bulletList: boolean;
+  bold: boolean;
+  orderedList: boolean;
+  taskList: boolean;
+  textSize: TextSize;
+}
+
+const getToolbarState = (editor: Editor | null): ToolbarState => ({
+  bulletList: editor?.isActive('bulletList') ?? false,
+  bold: editor?.isActive('bold') ?? false,
+  orderedList: editor?.isActive('orderedList') ?? false,
+  taskList: editor?.isActive('taskList') ?? false,
+  textSize: (editor?.getAttributes('textStyle')?.fontSize as TextSize | undefined) || 'medium',
+});
+
 export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({ editor, visible }) => {
+  const [toolbarState, setToolbarState] = useState<ToolbarState>(() => getToolbarState(editor));
+
+  const syncToolbarState = useCallback(() => {
+    setToolbarState(getToolbarState(editor));
+  }, [editor]);
+
+  useEffect(() => {
+    syncToolbarState();
+
+    if (!editor) return;
+
+    const handleEditorStateChange = () => {
+      syncToolbarState();
+    };
+
+    editor.on('transaction', handleEditorStateChange);
+    editor.on('selectionUpdate', handleEditorStateChange);
+    editor.on('focus', handleEditorStateChange);
+    editor.on('blur', handleEditorStateChange);
+
+    return () => {
+      editor.off('transaction', handleEditorStateChange);
+      editor.off('selectionUpdate', handleEditorStateChange);
+      editor.off('focus', handleEditorStateChange);
+      editor.off('blur', handleEditorStateChange);
+    };
+  }, [editor, syncToolbarState]);
+
   if (!editor || !visible) return null;
 
-  const currentSize = editor.getAttributes('textStyle')?.fontSize || 'medium';
+  const currentSize = toolbarState.textSize;
 
-  const setFontSize = (size: string) => {
+  const runCommand = (command: () => void) => (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    command();
+    syncToolbarState();
+  };
+
+  const setFontSize = (size: TextSize) => {
     if (size === 'medium') {
       editor.chain().focus().unsetMark('textStyle').run();
     } else {
       editor.chain().focus().setMark('textStyle', { fontSize: size }).run();
     }
+
+    syncToolbarState();
   };
 
   return (
@@ -34,7 +88,7 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({ editor, vi
           {TEXT_SIZES.map(s => (
             <button
               key={s.value}
-              onMouseDown={(e) => { e.preventDefault(); setFontSize(s.value); }}
+              onMouseDown={runCommand(() => setFontSize(s.value))}
               className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
                 currentSize === s.value
                   ? 'bg-primary text-primary-foreground'
@@ -50,9 +104,11 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({ editor, vi
 
         {/* Bold */}
         <button
-          onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBold().run(); }}
+          onMouseDown={runCommand(() => {
+            editor.chain().focus().toggleBold().run();
+          })}
           className={`p-1.5 rounded-md transition-colors ${
-            editor.isActive('bold')
+            toolbarState.bold
               ? 'bg-primary text-primary-foreground'
               : 'text-foreground/70 hover:bg-muted'
           }`}
@@ -65,9 +121,11 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({ editor, vi
 
         {/* Bullet List */}
         <button
-          onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBulletList().run(); }}
+          onMouseDown={runCommand(() => {
+            editor.chain().focus().toggleBulletList().run();
+          })}
           className={`p-1.5 rounded-md transition-colors ${
-            editor.isActive('bulletList')
+            toolbarState.bulletList
               ? 'bg-primary text-primary-foreground'
               : 'text-foreground/70 hover:bg-muted'
           }`}
@@ -78,9 +136,11 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({ editor, vi
 
         {/* Numbered List */}
         <button
-          onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleOrderedList().run(); }}
+          onMouseDown={runCommand(() => {
+            editor.chain().focus().toggleOrderedList().run();
+          })}
           className={`p-1.5 rounded-md transition-colors ${
-            editor.isActive('orderedList')
+            toolbarState.orderedList
               ? 'bg-primary text-primary-foreground'
               : 'text-foreground/70 hover:bg-muted'
           }`}
@@ -91,9 +151,11 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({ editor, vi
 
         {/* Checkbox List */}
         <button
-          onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleTaskList().run(); }}
+          onMouseDown={runCommand(() => {
+            editor.chain().focus().toggleTaskList().run();
+          })}
           className={`p-1.5 rounded-md transition-colors ${
-            editor.isActive('taskList')
+            toolbarState.taskList
               ? 'bg-primary text-primary-foreground'
               : 'text-foreground/70 hover:bg-muted'
           }`}
