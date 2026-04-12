@@ -17,6 +17,16 @@ export const InfiniteCanvas: React.FC = () => {
   const [canvasSize, setCanvasSize] = useState({ w: window.innerWidth, h: window.innerHeight });
   const [activeEditor, setActiveEditor] = useState<Editor | null>(null);
   const [isNoteEditing, setIsNoteEditing] = useState(false);
+  const [highlightedNoteId, setHighlightedNoteId] = useState<string | null>(null);
+
+  const handleNavigateToNote = useCallback((noteId: string) => {
+    const note = notes.find(n => n.id === noteId);
+    if (!note) return;
+    const targetX = canvasSize.w / 2 - (note.x + note.width / 2) * view.scale;
+    const targetY = canvasSize.h / 2 - (note.y + note.height / 2) * view.scale;
+    setView(prev => ({ ...prev, x: targetX, y: targetY }));
+    setSelectedNoteId(noteId);
+  }, [notes, canvasSize, view.scale, setView, setSelectedNoteId]);
 
   const {
     notes, view, selectedNoteId, activeColor,
@@ -164,6 +174,7 @@ export const InfiniteCanvas: React.FC = () => {
             note={note}
             scale={view.scale}
             isSelected={selectedNoteId === note.id}
+            isHighlighted={highlightedNoteId === note.id}
             onSelect={() => setSelectedNoteId(note.id)}
             onMove={(x, y) => moveNote(note.id, x, y)}
             onResize={(w, h) => resizeNote(note.id, w, h)}
