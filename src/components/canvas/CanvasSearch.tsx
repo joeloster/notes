@@ -154,11 +154,13 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
     setHasNavigated(false);
     setShowSuggestions(false);
 
-    inputRef.current?.focus({ preventScroll: true });
-    requestAnimationFrame(() => {
+    const focusInput = () => {
       inputRef.current?.focus({ preventScroll: true });
       inputRef.current?.setSelectionRange(word.length, word.length);
-    });
+    };
+
+    focusInput();
+    requestAnimationFrame(focusInput);
   }, []);
 
   // Keyboard
@@ -251,17 +253,18 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
           {showSuggestions && suggestions.length > 0 && (
             <div className="absolute top-full mt-1 right-0 w-[340px] bg-toolbar-bg border border-toolbar-border rounded-xl shadow-[0_8px_32px_-8px_hsl(var(--toolbar-shadow)/0.15)] overflow-hidden z-50">
               {suggestions.map((word, i) => (
-                <button
-                  key={i}
+                <div
+                  key={`${word}-${i}`}
                   onMouseDown={(e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     handleSelectSuggestion(word);
                   }}
-                  className="w-full text-left px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors flex items-center gap-2"
+                  className="w-full cursor-pointer text-left px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors flex items-center gap-2"
                 >
                   <Search size={12} className="text-muted-foreground shrink-0" />
                   <span className="truncate">{highlightMatch(word, query)}</span>
-                </button>
+                </div>
               ))}
             </div>
           )}
