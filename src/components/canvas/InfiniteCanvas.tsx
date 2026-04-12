@@ -2,6 +2,7 @@ import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { useCanvasState } from '@/hooks/useCanvasState';
 import { StickyNote } from './StickyNote';
 import { CanvasToolbar } from './CanvasToolbar';
+import { CanvasSearch } from './CanvasSearch';
 import { MiniMap } from './MiniMap';
 import { NoteEditorToolbar } from './NoteEditorToolbar';
 import { GRID_SIZE } from '@/types/canvas';
@@ -16,13 +17,23 @@ export const InfiniteCanvas: React.FC = () => {
   const [canvasSize, setCanvasSize] = useState({ w: window.innerWidth, h: window.innerHeight });
   const [activeEditor, setActiveEditor] = useState<Editor | null>(null);
   const [isNoteEditing, setIsNoteEditing] = useState(false);
+  const [highlightedNoteId, setHighlightedNoteId] = useState<string | null>(null);
 
   const {
     notes, view, selectedNoteId, activeColor,
     setActiveColor, setSelectedNoteId, setView,
     addNote, updateNote, deleteNote, moveNote, resizeNote,
-    zoom, resetView, pan,
+    zoom, resetView,
   } = useCanvasState();
+
+  const handleNavigateToNote = useCallback((noteId: string) => {
+    const note = notes.find(n => n.id === noteId);
+    if (!note) return;
+    const targetX = canvasSize.w / 2 - (note.x + note.width / 2) * view.scale;
+    const targetY = canvasSize.h / 2 - (note.y + note.height / 2) * view.scale;
+    setView(prev => ({ ...prev, x: targetX, y: targetY }));
+    setSelectedNoteId(noteId);
+  }, [notes, canvasSize, view.scale, setView, setSelectedNoteId]);
 
   const handleEditingChange = useCallback((editing: boolean, editor: Editor | null) => {
     setIsNoteEditing(editing);
@@ -134,6 +145,14 @@ export const InfiniteCanvas: React.FC = () => {
       {/* Floating text toolbar */}
       <NoteEditorToolbar editor={activeEditor} visible={isNoteEditing} />
 
+      {/* Search */}
+      <CanvasSearch
+        notes={notes}
+        onNavigateToNote={handleNavigateToNote}
+        highlightedNoteId={highlightedNoteId}
+        onHighlightNote={setHighlightedNoteId}
+      />
+
       {/* Grid background */}
       <div
         className="absolute inset-0 pointer-events-auto canvas-grid"
@@ -163,6 +182,7 @@ export const InfiniteCanvas: React.FC = () => {
             note={note}
             scale={view.scale}
             isSelected={selectedNoteId === note.id}
+            isHighlighted={highlightedNoteId === note.id}
             onSelect={() => setSelectedNoteId(note.id)}
             onMove={(x, y) => moveNote(note.id, x, y)}
             onResize={(w, h) => resizeNote(note.id, w, h)}

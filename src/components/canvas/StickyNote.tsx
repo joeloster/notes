@@ -8,6 +8,7 @@ interface StickyNoteProps {
   note: Note;
   scale: number;
   isSelected: boolean;
+  isHighlighted?: boolean;
   onSelect: () => void;
   onMove: (x: number, y: number) => void;
   onResize: (w: number, h: number) => void;
@@ -31,7 +32,7 @@ const isEditable = (el: HTMLElement) =>
   el.closest('[contenteditable="true"]') !== null;
 
 export const StickyNote: React.FC<StickyNoteProps> = ({
-  note, scale, isSelected, onSelect, onMove, onResize, onUpdate, onDelete, onEditingChange,
+  note, scale, isSelected, isHighlighted, onSelect, onMove, onResize, onUpdate, onDelete, onEditingChange,
 }) => {
   // --- Single source of truth ---
   const [isEditing, setIsEditing] = useState(false);
@@ -196,9 +197,9 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
 
   return (
     <div
-      className={`absolute select-none transition-shadow duration-200 rounded-xl ${NOTE_COLOR_MAP[note.color]} ${
+      className={`absolute select-none transition-all duration-200 rounded-xl ${NOTE_COLOR_MAP[note.color]} ${
         isSelected ? `ring-2 ${NOTE_COLOR_RING_MAP[note.color]} shadow-lg` : 'shadow-md'
-      } ${isDragging && didDrag.current ? 'cursor-grabbing z-50 shadow-xl' : 'cursor-grab z-10'}`}
+      } ${isHighlighted && !isSelected ? 'ring-2 ring-primary/60 shadow-lg shadow-primary/20' : ''} ${isDragging && didDrag.current ? 'cursor-grabbing z-50 shadow-xl' : 'cursor-grab z-10'}`}
       style={{
         left: note.x,
         top: note.y,
