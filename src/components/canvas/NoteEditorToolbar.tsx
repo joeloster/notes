@@ -8,9 +8,9 @@ interface NoteEditorToolbarProps {
 }
 
 const TEXT_SIZES = [
-  { label: 'Small', value: 'small' },
-  { label: 'Medium', value: 'medium' },
-  { label: 'Large', value: 'large' },
+  { label: 'S', value: 'small' },
+  { label: 'M', value: 'medium' },
+  { label: 'L', value: 'large' },
 ] as const;
 
 type TextSize = (typeof TEXT_SIZES)[number]['value'];
@@ -39,10 +39,18 @@ const getToolbarState = (editor: Editor | null): ToolbarState => ({
 });
 
 export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({ editor, visible }) => {
+  // Use a ref to track overridden size so transaction events don't clobber it
+  const overrideRef = React.useRef<TextSize | null>(null);
+
   const [toolbarState, setToolbarState] = useState<ToolbarState>(() => getToolbarState(editor));
 
   const syncToolbarState = useCallback(() => {
-    setToolbarState(getToolbarState(editor));
+    const state = getToolbarState(editor);
+    // If we have an override, keep it until the editor catches up
+    if (overrideRef.current !== null) {
+      state.textSize = overrideRef.current;
+    }
+    setToolbarState(state);
   }, [editor]);
 
   useEffect(() => {
@@ -51,19 +59,22 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({ editor, vi
     if (!editor) return;
 
     const handleEditorStateChange = () => {
+      // Clear override once editor state reflects the change
+      if (overrideRef.current !== null) {
+        const editorSize = getTextSize(editor);
+        if (editorSize === overrideRef.current) {
+          overrideRef.current = null;
+        }
+      }
       syncToolbarState();
     };
 
     editor.on('transaction', handleEditorStateChange);
     editor.on('selectionUpdate', handleEditorStateChange);
-    editor.on('focus', handleEditorStateChange);
-    editor.on('blur', handleEditorStateChange);
 
     return () => {
       editor.off('transaction', handleEditorStateChange);
       editor.off('selectionUpdate', handleEditorStateChange);
-      editor.off('focus', handleEditorStateChange);
-      editor.off('blur', handleEditorStateChange);
     };
   }, [editor, syncToolbarState]);
 
@@ -74,18 +85,25 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({ editor, vi
   const runCommand = (command: () => void) => (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     command();
-    // Force immediate state sync after command
-    requestAnimationFrame(syncToolbarState);
   };
 
   const setFontSize = (size: TextSize) => {
-    // Always unset first, then set if not medium
-    editor.chain().focus().unsetMark('textStyle').run();
-    if (size !== 'medium') {
-      editor.chain().focus().setMark('textStyle', { fontSize: size }).run();
-    }
-    // Immediate optimistic update
+    // Set override immediately for instant feedback
+    overrideRef.current = size;
     setToolbarState(prev => ({ ...prev, textSize: size }));
+
+    // Apply in a single chain: unset then set
+    if (size === 'medium') {
+      editor.chain().focus().unsetMark('textStyle').run();
+    } else {
+      editor.chain().focus().unsetMark('textStyle').setMark('textStyle', { fontSize: size }).run();
+    }
+
+    // Clear override after a short delay as fallback
+    setTimeout(() => {
+      overrideRef.current = null;
+      syncToolbarState();
+    }, 100);
   };
 
   return (
