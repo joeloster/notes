@@ -48,6 +48,13 @@ interface NoteEditorProps {
   onEditorReady: (editor: Editor | null) => void;
 }
 
+const isCheckboxInteractionTarget = (target: EventTarget | null): target is HTMLElement => (
+  target instanceof HTMLElement && (
+    target.closest('input[type="checkbox"]') !== null
+    || Boolean(target.closest('label')?.querySelector('input[type="checkbox"]'))
+  )
+);
+
 export const NoteEditor: React.FC<NoteEditorProps> = ({
   content,
   isEditing,
@@ -59,24 +66,57 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<Editor | null>(null);
+  const lastCheckboxTaskItemRef = useRef<HTMLElement | null>(null);
+
+  const resolveTaskItemPosition = useCallback((taskItemElement: HTMLElement) => {
+    const currentEditor = editorRef.current;
+    if (!currentEditor) return null;
+
+    const domCandidates = [
+      taskItemElement,
+      taskItemElement.querySelector('div'),
+    ].filter((candidate): candidate is HTMLElement => candidate instanceof HTMLElement);
+
+    for (const domNode of domCandidates) {
+      for (const offset of [0, domNode.childNodes.length]) {
+        try {
+          const rawPosition = currentEditor.view.posAtDOM(domNode, offset);
+          const boundedPosition = Math.max(0, Math.min(rawPosition, currentEditor.state.doc.content.size));
+
+          for (const candidatePosition of [boundedPosition, boundedPosition - 1, boundedPosition + 1]) {
+            if (candidatePosition < 0) continue;
+
+            const candidateNode = currentEditor.state.doc.nodeAt(candidatePosition);
+            if (candidateNode?.type.name === 'taskItem') return candidatePosition;
+          }
+
+          const resolvedPosition = currentEditor.state.doc.resolve(boundedPosition);
+          for (let depth = resolvedPosition.depth; depth > 0; depth -= 1) {
+            if (resolvedPosition.node(depth).type.name === 'taskItem') {
+              return resolvedPosition.before(depth);
+            }
+          }
+        } catch {
+          continue;
+        }
+      }
+    }
+
+    return null;
+  }, []);
 
   // Allow checkbox toggling in read-only mode
-  const handleReadOnlyChecked = useCallback((node: ProseMirrorNode, checked: boolean) => {
+  const handleReadOnlyChecked = useCallback((_node: ProseMirrorNode, checked: boolean) => {
     const currentEditor = editorRef.current;
+    const taskItemElement = lastCheckboxTaskItemRef.current;
     if (!currentEditor) return false;
+    if (!taskItemElement) return false;
 
-    let position: number | null = null;
-    currentEditor.state.doc.descendants((candidate, pos) => {
-      if (candidate === node) {
-        position = pos;
-        return false;
-      }
-      return true;
-    });
-
+    const position = resolveTaskItemPosition(taskItemElement);
     if (position === null) return false;
+
     const currentNode = currentEditor.state.doc.nodeAt(position);
-    if (!currentNode) return false;
+    if (!currentNode || currentNode.type.name !== 'taskItem') return false;
 
     const tr = currentEditor.state.tr.setNodeMarkup(position, undefined, {
       ...currentNode.attrs,
@@ -86,7 +126,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     // Persist the change immediately
     onUpdate(currentEditor.getHTML());
     return true;
-  }, [onUpdate]);
+  }, [onUpdate, resolveTaskItemPosition]);
 
   const editor = useEditor({
     extensions: [
@@ -137,11 +177,8 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   // --- Checkbox isolation: stop propagation so note doesn't drag ---
   const handleCheckboxCapture = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
-    const isCheckboxTarget =
-      target.closest('input[type="checkbox"]') ||
-      target.closest('label')?.querySelector('input[type="checkbox"]') ||
-      target.closest('li[data-type="taskItem"]')?.querySelector('input[type="checkbox"]');
-    if (isCheckboxTarget) {
+    if (isCheckboxInteractionTarget(target)) {
+      lastCheckboxTaskItemRef.current = target.closest('li[data-type="taskItem"]') as HTMLElement | null;
       e.stopPropagation();
       // Never preventDefault — let the native toggle work
     }
