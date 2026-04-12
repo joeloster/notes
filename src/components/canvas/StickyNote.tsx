@@ -80,7 +80,9 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
 
   // Drag
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('.note-actions')) return;
+    // Only skip drag for actual interactive elements, not the whole header
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('input') || target.closest('[role="button"]')) return;
     e.stopPropagation();
     onSelect();
     dragThreshold.current = { startX: e.clientX, startY: e.clientY, moved: false };
