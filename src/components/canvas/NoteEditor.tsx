@@ -107,7 +107,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     const nextHtml = updateTaskItemCheckedInHtml(currentEditor.getHTML(), checkboxIndex, checked);
     if (!nextHtml) return false;
 
-    currentEditor.commands.setContent(nextHtml, false);
+    currentEditor.commands.setContent(nextHtml, { emitUpdate: false });
     onUpdate(nextHtml);
     return true;
   }, [onUpdate]);
