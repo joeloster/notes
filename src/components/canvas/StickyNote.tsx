@@ -3,7 +3,6 @@ import { Note, NOTE_COLOR_MAP, NOTE_COLOR_RING_MAP, NOTE_COLORS, NoteColor } fro
 import { Trash2 } from 'lucide-react';
 import { NoteEditor } from './NoteEditor';
 import { Editor } from '@tiptap/react';
-import { isContentEditableTarget, isNoteControlTarget, isNoteEditorTarget } from './noteInteractionUtils';
 
 interface StickyNoteProps {
   note: Note;
@@ -17,24 +16,53 @@ interface StickyNoteProps {
   onEditingChange: (editing: boolean, editor: Editor | null) => void;
 }
 
+// --- Target detection helpers (inline for clarity) ---
+const isCheckbox = (el: HTMLElement) =>
+  el.closest('input[type="checkbox"]') !== null ||
+  Boolean(el.closest('label')?.querySelector('input[type="checkbox"]'));
+
+const isControl = (el: HTMLElement) =>
+  isCheckbox(el) ||
+  el.closest('button') !== null ||
+  el.closest('input') !== null ||
+  el.closest('[role="button"]') !== null;
+
+const isEditable = (el: HTMLElement) =>
+  el.closest('[contenteditable="true"]') !== null;
+
 export const StickyNote: React.FC<StickyNoteProps> = ({
   note, scale, isSelected, onSelect, onMove, onResize, onUpdate, onDelete, onEditingChange,
 }) => {
+  // --- Single source of truth ---
+  const [isEditing, setIsEditing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const noteRef = useRef<HTMLDivElement>(null);
+
   const editorRef = useRef<Editor | null>(null);
   const dragStart = useRef({ x: 0, y: 0, noteX: 0, noteY: 0 });
   const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0 });
-  const dragThreshold = useRef({ startX: 0, startY: 0, moved: false });
+  const didDrag = useRef(false);
 
+  // --- Editor ready callback ---
   const handleEditorReady = useCallback((editor: Editor | null) => {
     editorRef.current = editor;
   }, []);
 
-  // Auto-focus on new empty notes
+  // --- Notify parent of editing state ---
+  useEffect(() => {
+    const active = isEditing && isSelected;
+    onEditingChange(active, active ? editorRef.current : null);
+  }, [isEditing, isSelected, onEditingChange]);
+
+  // --- Exit editing when deselected ---
+  useEffect(() => {
+    if (!isSelected && isEditing) {
+      setIsEditing(false);
+    }
+  }, [isSelected, isEditing]);
+
+  // --- Auto-focus new empty notes ---
   useEffect(() => {
     if (isSelected && note.content === '' && editorRef.current) {
       setIsEditing(true);
@@ -42,70 +70,113 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
     }
   }, [isSelected, note.content]);
 
-  // Notify parent of editing state
+  // --- Cleanup on unmount ---
   useEffect(() => {
-    onEditingChange(isEditing && isSelected, isEditing && isSelected ? editorRef.current : null);
-  }, [isEditing, isSelected, onEditingChange]);
-
-  // When deselected, stop editing
-  useEffect(() => {
-    if (!isSelected && isEditing) {
-      setIsEditing(false);
-    }
-  }, [isSelected, isEditing]);
-
-  // Cleanup: hide toolbar on unmount
-  useEffect(() => {
-    return () => {
-      onEditingChange(false, null);
-    };
+    return () => onEditingChange(false, null);
   }, [onEditingChange]);
 
-  // Drag
+  // ============================
+  // EVENT HANDLERS
+  // ============================
+
+  /**
+   * mousedown on the note container.
+   * Priority: checkbox > contenteditable > controls > drag
+   */
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-    // Skip drag for interactive elements and contenteditable (allow text selection)
-    if (isNoteControlTarget(target) || isContentEditableTarget(target)) return;
+
+    // 1. Checkbox — let it through, block everything else
+    if (isCheckbox(target)) {
+      e.stopPropagation();
+      return;
+    }
+
+    // 2. Contenteditable — allow text selection, no drag
+    if (isEditable(target)) {
+      e.stopPropagation();
+      onSelect();
+      return;
+    }
+
+    // 3. Buttons/inputs — let them handle themselves
+    if (isControl(target)) {
+      e.stopPropagation();
+      return;
+    }
+
+    // 4. Everything else — start drag
     e.stopPropagation();
     onSelect();
-    dragThreshold.current = { startX: e.clientX, startY: e.clientY, moved: false };
+    didDrag.current = false;
     dragStart.current = { x: e.clientX, y: e.clientY, noteX: note.x, noteY: note.y };
     setIsDragging(true);
   }, [note.x, note.y, onSelect]);
 
+  /**
+   * click on the note — enters edit mode if it was a clean click
+   * (not a drag, not a control, target is the editor area)
+   */
   const handleClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
+    if (didDrag.current) return;
+    if (isControl(target)) return;
+    if (isEditing) return;
 
-    if (dragThreshold.current.moved || isEditing) return;
-    if (isNoteControlTarget(target) || !isNoteEditorTarget(target)) return;
-
-    e.stopPropagation();
-    onSelect();
-    setIsEditing(true);
-    requestAnimationFrame(() => editorRef.current?.commands.focus());
+    // Only enter edit mode if clicking in the editor scroll area
+    if (target.closest('[data-note-editor-scroll="true"]')) {
+      e.stopPropagation();
+      onSelect();
+      setIsEditing(true);
+      requestAnimationFrame(() => editorRef.current?.commands.focus());
+    }
   }, [isEditing, onSelect]);
 
+  /**
+   * Double-click — always enters edit mode (except on controls)
+   */
+  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (isControl(target)) return;
+    e.stopPropagation();
+    setIsEditing(true);
+    requestAnimationFrame(() => editorRef.current?.commands.focus());
+  }, []);
+
+  // --- Drag movement (window listeners) ---
   useEffect(() => {
     if (!isDragging) return;
     const handleMove = (e: MouseEvent) => {
-      const dx = (e.clientX - dragStart.current.x) / scale;
-      const dy = (e.clientY - dragStart.current.y) / scale;
-      if (!dragThreshold.current.moved) {
-        const dist = Math.abs(e.clientX - dragThreshold.current.startX) + Math.abs(e.clientY - dragThreshold.current.startY);
-        if (dist < 4) return;
-        dragThreshold.current.moved = true;
-        if (isEditing && editorRef.current) {
-          editorRef.current.commands.blur();
-          setIsEditing(false);
-        }
+      const dx = Math.abs(e.clientX - dragStart.current.x);
+      const dy = Math.abs(e.clientY - dragStart.current.y);
+      if (!didDrag.current && dx + dy < 4) return;
+      didDrag.current = true;
+
+      // If we were editing, exit on drag
+      if (isEditing) {
+        editorRef.current?.commands.blur();
+        setIsEditing(false);
       }
-      onMove(dragStart.current.noteX + dx, dragStart.current.noteY + dy);
+
+      const moveX = (e.clientX - dragStart.current.x) / scale;
+      const moveY = (e.clientY - dragStart.current.y) / scale;
+      onMove(dragStart.current.noteX + moveX, dragStart.current.noteY + moveY);
     };
     const handleUp = () => setIsDragging(false);
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleUp);
-    return () => { window.removeEventListener('mousemove', handleMove); window.removeEventListener('mouseup', handleUp); };
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+    };
   }, [isDragging, scale, onMove, isEditing]);
+
+  // --- Resize ---
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsResizing(true);
+    resizeStart.current = { x: e.clientX, y: e.clientY, w: note.width, h: note.height };
+  }, [note.width, note.height]);
 
   useEffect(() => {
     if (!isResizing) return;
@@ -117,29 +188,17 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
     const handleUp = () => setIsResizing(false);
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleUp);
-    return () => { window.removeEventListener('mousemove', handleMove); window.removeEventListener('mouseup', handleUp); };
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+    };
   }, [isResizing, scale, onResize]);
-
-  const handleResizeStart = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsResizing(true);
-    resizeStart.current = { x: e.clientX, y: e.clientY, w: note.width, h: note.height };
-  };
-
-  const handleDoubleClick = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (isNoteControlTarget(target)) return;
-    e.stopPropagation();
-    setIsEditing(true);
-    setTimeout(() => editorRef.current?.commands.focus(), 0);
-  };
 
   return (
     <div
-      ref={noteRef}
       className={`absolute select-none transition-shadow duration-200 rounded-xl ${NOTE_COLOR_MAP[note.color]} ${
         isSelected ? `ring-2 ${NOTE_COLOR_RING_MAP[note.color]} shadow-lg` : 'shadow-md'
-      } ${isDragging && dragThreshold.current.moved ? 'cursor-grabbing z-50 shadow-xl' : 'cursor-grab z-10'}`}
+      } ${isDragging && didDrag.current ? 'cursor-grabbing z-50 shadow-xl' : 'cursor-grab z-10'}`}
       style={{
         left: note.x,
         top: note.y,
@@ -151,7 +210,7 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
       onDoubleClick={handleDoubleClick}
     >
       {/* Header bar */}
-      <div className="flex items-center justify-between px-3 pt-2 pb-1 note-actions">
+      <div className="flex items-center justify-between px-3 pt-2 pb-1">
         <button
           onClick={(e) => { e.stopPropagation(); setShowColorPicker(!showColorPicker); }}
           className="w-4 h-4 rounded-full border border-foreground/10 hover:scale-125 transition-transform"
@@ -165,9 +224,9 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
         </button>
       </div>
 
-      {/* Color picker dropdown */}
+      {/* Color picker */}
       {showColorPicker && (
-        <div className="absolute top-9 left-2 flex gap-1.5 bg-card p-2 rounded-lg shadow-lg z-50 note-actions">
+        <div className="absolute top-9 left-2 flex gap-1.5 bg-card p-2 rounded-lg shadow-lg z-50">
           {NOTE_COLORS.map(c => (
             <button
               key={c.name}

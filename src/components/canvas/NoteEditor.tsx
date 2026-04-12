@@ -7,12 +7,10 @@ import Placeholder from '@tiptap/extension-placeholder';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Extension } from '@tiptap/react';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
-import { getWheelDeltaMultiplier, isCheckboxInteractionTarget } from './noteInteractionUtils';
 
 // Custom font size extension
 const FontSize = Extension.create({
   name: 'fontSize',
-
   addGlobalAttributes() {
     return [
       {
@@ -62,32 +60,29 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<Editor | null>(null);
 
+  // Allow checkbox toggling in read-only mode
   const handleReadOnlyChecked = useCallback((node: ProseMirrorNode, checked: boolean) => {
     const currentEditor = editorRef.current;
     if (!currentEditor) return false;
 
     let position: number | null = null;
-
     currentEditor.state.doc.descendants((candidate, pos) => {
       if (candidate === node) {
         position = pos;
         return false;
       }
-
       return true;
     });
 
     if (position === null) return false;
-
     const currentNode = currentEditor.state.doc.nodeAt(position);
     if (!currentNode) return false;
 
-    const transaction = currentEditor.state.tr.setNodeMarkup(position, undefined, {
+    const tr = currentEditor.state.tr.setNodeMarkup(position, undefined, {
       ...currentNode.attrs,
       checked,
     });
-
-    currentEditor.view.dispatch(transaction);
+    currentEditor.view.dispatch(tr);
     return true;
   }, []);
 
@@ -110,9 +105,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     ],
     content,
     editable: isEditing,
-    onUpdate: ({ editor: e }) => {
-      onUpdate(e.getHTML());
-    },
+    onUpdate: ({ editor: e }) => onUpdate(e.getHTML()),
     onFocus: () => onFocus(),
     onBlur: () => onBlur(),
     editorProps: {
@@ -127,64 +120,61 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     onEditorReady(editor);
   }, [editor, onEditorReady]);
 
-  const handleCheckboxMouseDownCapture = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
-    if (isCheckboxInteractionTarget(event.target)) {
-      event.stopPropagation();
-    }
-  }, []);
-
-  const handleCheckboxClickCapture = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
-    if (isCheckboxInteractionTarget(event.target)) {
-      event.stopPropagation();
-    }
-  }, []);
-
-  const handleWheelCapture = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
-    if (!isFocused || !containerRef.current) return;
-
-    const scrollContainer = containerRef.current;
-    const hasOverflow = scrollContainer.scrollHeight > scrollContainer.clientHeight + 1;
-
-    if (!hasOverflow) return;
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    const multiplier = getWheelDeltaMultiplier(event.deltaMode, scrollContainer.clientHeight);
-    scrollContainer.scrollTop += event.deltaY * multiplier;
-
-    if (event.deltaX !== 0) {
-      scrollContainer.scrollLeft += event.deltaX * multiplier;
-    }
-  }, [isFocused]);
-
+  // Sync editable state
   useEffect(() => {
-    if (editor) {
-      editor.setEditable(isEditing);
-    }
+    if (editor) editor.setEditable(isEditing);
   }, [isEditing, editor]);
 
-  // Sync external content changes
+  // Sync external content
   useEffect(() => {
     if (editor && !editor.isFocused && content !== editor.getHTML()) {
       editor.commands.setContent(content);
     }
   }, [content, editor]);
 
+  // --- Checkbox isolation: stop propagation so note doesn't drag ---
+  const handleCheckboxCapture = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (
+      target.closest('input[type="checkbox"]') ||
+      target.closest('label')?.querySelector('input[type="checkbox"]')
+    ) {
+      e.stopPropagation();
+    }
+  }, []);
+
+  // --- Scroll isolation: when focused & scrollable, trap wheel events ---
+  const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    if (!isFocused || !containerRef.current) return;
+
+    const el = containerRef.current;
+    const hasOverflow = el.scrollHeight > el.clientHeight + 1;
+    if (!hasOverflow) return;
+
+    // Trap the scroll — don't let it reach the canvas zoom handler
+    e.stopPropagation();
+
+    // Apply scroll manually
+    const multiplier = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? el.clientHeight : 1;
+    el.scrollTop += e.deltaY * multiplier;
+    if (e.deltaX !== 0) {
+      el.scrollLeft += e.deltaX * multiplier;
+    }
+  }, [isFocused]);
+
   return (
     <div
       ref={containerRef}
       data-note-editor-scroll="true"
-      className={`note-editor-scroll w-full h-full ${isEditing ? 'cursor-text' : 'cursor-grab'}`}
+      className={`w-full h-full ${isEditing ? 'cursor-text' : 'cursor-grab'}`}
       style={{
         overflowX: 'hidden',
         overflowY: isFocused ? 'auto' : 'hidden',
         overscrollBehavior: isFocused ? 'contain' : 'auto',
       }}
-      onMouseDownCapture={handleCheckboxMouseDownCapture}
-      onClickCapture={handleCheckboxClickCapture}
-      onDoubleClickCapture={handleCheckboxClickCapture}
-      onWheelCapture={handleWheelCapture}
+      onMouseDownCapture={handleCheckboxCapture}
+      onClickCapture={handleCheckboxCapture}
+      onWheelCapture={handleWheel}
     >
       <EditorContent editor={editor} className="h-full" />
     </div>
