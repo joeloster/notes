@@ -48,6 +48,42 @@ interface NoteEditorProps {
   onEditorReady: (editor: Editor | null) => void;
 }
 
+const getCheckboxInput = (target: EventTarget | null) => {
+  if (!(target instanceof HTMLElement)) return null;
+  if (target instanceof HTMLInputElement && target.type === 'checkbox') return target;
+  return target.closest('label')?.querySelector('input[type="checkbox"]') ?? null;
+};
+
+const isCheckboxInteractionTarget = (target: EventTarget | null): target is HTMLElement => (
+  target instanceof HTMLElement && (
+    target.closest('input[type="checkbox"]') !== null
+    || Boolean(target.closest('label')?.querySelector('input[type="checkbox"]'))
+  )
+);
+
+const updateTaskItemCheckedInHtml = (html: string, checkboxIndex: number, checked: boolean) => {
+  if (checkboxIndex < 0) return null;
+
+  const parser = new DOMParser();
+  const documentFragment = parser.parseFromString(html, 'text/html');
+  const taskItems = Array.from(documentFragment.querySelectorAll('li[data-type="taskItem"]'));
+  const taskItem = taskItems[checkboxIndex];
+
+  if (!taskItem) return null;
+
+  taskItem.setAttribute('data-checked', checked ? 'true' : 'false');
+
+  const checkbox = taskItem.querySelector('input[type="checkbox"]');
+  if (checkbox instanceof HTMLInputElement) {
+    checkbox.checked = checked;
+
+    if (checked) checkbox.setAttribute('checked', 'checked');
+    else checkbox.removeAttribute('checked');
+  }
+
+  return documentFragment.body.innerHTML;
+};
+
 export const NoteEditor: React.FC<NoteEditorProps> = ({
   content,
   isEditing,
@@ -59,32 +95,20 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<Editor | null>(null);
+  const lastCheckboxIndexRef = useRef<number | null>(null);
 
   // Allow checkbox toggling in read-only mode
-  const handleReadOnlyChecked = useCallback((node: ProseMirrorNode, checked: boolean) => {
+  const handleReadOnlyChecked = useCallback((_node: ProseMirrorNode, checked: boolean) => {
     const currentEditor = editorRef.current;
+    const checkboxIndex = lastCheckboxIndexRef.current;
     if (!currentEditor) return false;
+    if (checkboxIndex === null) return false;
 
-    let position: number | null = null;
-    currentEditor.state.doc.descendants((candidate, pos) => {
-      if (candidate === node) {
-        position = pos;
-        return false;
-      }
-      return true;
-    });
+    const nextHtml = updateTaskItemCheckedInHtml(currentEditor.getHTML(), checkboxIndex, checked);
+    if (!nextHtml) return false;
 
-    if (position === null) return false;
-    const currentNode = currentEditor.state.doc.nodeAt(position);
-    if (!currentNode) return false;
-
-    const tr = currentEditor.state.tr.setNodeMarkup(position, undefined, {
-      ...currentNode.attrs,
-      checked,
-    });
-    currentEditor.view.dispatch(tr);
-    // Persist the change immediately
-    onUpdate(currentEditor.getHTML());
+    currentEditor.commands.setContent(nextHtml, { emitUpdate: false });
+    onUpdate(nextHtml);
     return true;
   }, [onUpdate]);
 
@@ -134,17 +158,17 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     }
   }, [content, editor]);
 
-  // --- Checkbox isolation: stop propagation so note doesn't drag ---
-  const handleCheckboxCapture = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    const isCheckboxTarget =
-      target.closest('input[type="checkbox"]') ||
-      target.closest('label')?.querySelector('input[type="checkbox"]') ||
-      target.closest('li[data-type="taskItem"]')?.querySelector('input[type="checkbox"]');
-    if (isCheckboxTarget) {
-      e.stopPropagation();
-      // Never preventDefault — let the native toggle work
-    }
+  const handleCheckboxPointerCapture = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement | null;
+    if (!isCheckboxInteractionTarget(target)) return;
+
+    const checkbox = getCheckboxInput(target);
+    const container = containerRef.current;
+    if (!checkbox || !container) return;
+
+    const allCheckboxes = Array.from(container.querySelectorAll('input[type="checkbox"]'));
+    lastCheckboxIndexRef.current = allCheckboxes.indexOf(checkbox);
+    e.stopPropagation();
   }, []);
 
   // --- Scroll isolation: when focused & scrollable, trap wheel events ---
@@ -176,8 +200,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
         overflowY: isFocused ? 'auto' : 'hidden',
         overscrollBehavior: isFocused ? 'contain' : 'auto',
       }}
-      onMouseDownCapture={handleCheckboxCapture}
-      onClickCapture={handleCheckboxCapture}
+      onPointerDownCapture={handleCheckboxPointerCapture}
       onWheelCapture={handleWheel}
     >
       <EditorContent editor={editor} className="h-full" />
