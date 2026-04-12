@@ -55,6 +55,7 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [hasNavigated, setHasNavigated] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -83,6 +84,7 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
   // Reset index when results change
   useEffect(() => {
     setCurrentIndex(0);
+    setHasNavigated(false);
     if (results.length > 0) {
       onHighlightNote(results[0]);
     } else {
@@ -95,12 +97,26 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
     if (results.length === 0) return;
     const clamped = ((index % results.length) + results.length) % results.length;
     setCurrentIndex(clamped);
+    setHasNavigated(true);
     onHighlightNote(results[clamped]);
     onNavigateToNote(results[clamped]);
   }, [results, onNavigateToNote, onHighlightNote]);
 
-  const handleNext = useCallback(() => navigateTo(currentIndex + 1), [currentIndex, navigateTo]);
-  const handlePrev = useCallback(() => navigateTo(currentIndex - 1), [currentIndex, navigateTo]);
+  const handleNext = useCallback(() => {
+    if (!hasNavigated) {
+      navigateTo(0);
+      return;
+    }
+    navigateTo(currentIndex + 1);
+  }, [currentIndex, hasNavigated, navigateTo]);
+
+  const handlePrev = useCallback(() => {
+    if (!hasNavigated) {
+      navigateTo(results.length - 1);
+      return;
+    }
+    navigateTo(currentIndex - 1);
+  }, [currentIndex, hasNavigated, navigateTo, results.length]);
 
   // Open / close
   const open = useCallback(() => {
@@ -113,6 +129,8 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
     setIsOpen(false);
     setQuery('');
     setDebouncedQuery('');
+    setCurrentIndex(0);
+    setHasNavigated(false);
     setShowSuggestions(false);
     onHighlightNote(null);
   }, [onHighlightNote]);
@@ -132,23 +150,16 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
   const handleSelectSuggestion = useCallback((word: string) => {
     setQuery(word);
     setDebouncedQuery(word);
+    setCurrentIndex(0);
+    setHasNavigated(false);
     setShowSuggestions(false);
 
-    // Compute results immediately and navigate to the first match
-    const q = word.toLowerCase();
-    const matchingIds = notes.filter(n => stripHtml(n.content).toLowerCase().includes(q)).map(n => n.id);
-    if (matchingIds.length > 0) {
-      setCurrentIndex(0);
-      onHighlightNote(matchingIds[0]);
-      onNavigateToNote(matchingIds[0]);
-    }
-
-    // Force focus back with multiple attempts to overcome any focus steal
-    inputRef.current?.focus();
-    setTimeout(() => inputRef.current?.focus(), 0);
-    setTimeout(() => inputRef.current?.focus(), 50);
-    setTimeout(() => inputRef.current?.focus(), 150);
-  }, [notes, onHighlightNote, onNavigateToNote]);
+    inputRef.current?.focus({ preventScroll: true });
+    requestAnimationFrame(() => {
+      inputRef.current?.focus({ preventScroll: true });
+      inputRef.current?.setSelectionRange(word.length, word.length);
+    });
+  }, []);
 
   // Keyboard
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -156,9 +167,11 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
     if (e.key === 'Enter') {
       e.preventDefault();
       setShowSuggestions(false);
-      if (e.shiftKey) handlePrev(); else handleNext();
+      if (results.length > 0) {
+        navigateTo(hasNavigated ? currentIndex : 0);
+      }
     }
-  }, [close, handleNext, handlePrev]);
+  }, [close, currentIndex, hasNavigated, navigateTo, results.length]);
 
   // Global Ctrl+F
   useEffect(() => {
