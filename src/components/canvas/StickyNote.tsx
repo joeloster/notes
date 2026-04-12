@@ -43,8 +43,8 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
 
   // Notify parent of editing state
   useEffect(() => {
-    onEditingChange(isEditing, editorRef.current);
-  }, [isEditing, onEditingChange]);
+    onEditingChange(isEditing && isSelected, isEditing && isSelected ? editorRef.current : null);
+  }, [isEditing, isSelected, onEditingChange]);
 
   // When deselected, stop editing
   useEffect(() => {
@@ -52,6 +52,13 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
       setIsEditing(false);
     }
   }, [isSelected, isEditing]);
+
+  // Cleanup: hide toolbar on unmount
+  useEffect(() => {
+    return () => {
+      onEditingChange(false, null);
+    };
+  }, [onEditingChange]);
 
   // Smart scroll: capture wheel events on the note element
   useEffect(() => {
