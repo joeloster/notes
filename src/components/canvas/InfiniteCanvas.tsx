@@ -145,6 +145,14 @@ export const InfiniteCanvas: React.FC = () => {
       {/* Floating text toolbar */}
       <NoteEditorToolbar editor={activeEditor} visible={isNoteEditing} />
 
+      {/* Search */}
+      <CanvasSearch
+        notes={notes}
+        onNavigateToNote={handleNavigateToNote}
+        highlightedNoteId={highlightedNoteId}
+        onHighlightNote={setHighlightedNoteId}
+      />
+
       {/* Grid background */}
       <div
         className="absolute inset-0 pointer-events-auto canvas-grid"
