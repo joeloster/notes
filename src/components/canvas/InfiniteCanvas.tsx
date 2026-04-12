@@ -2,6 +2,7 @@ import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { useCanvasState } from '@/hooks/useCanvasState';
 import { StickyNote } from './StickyNote';
 import { CanvasToolbar } from './CanvasToolbar';
+import { CanvasSearch } from './CanvasSearch';
 import { MiniMap } from './MiniMap';
 import { NoteEditorToolbar } from './NoteEditorToolbar';
 import { GRID_SIZE } from '@/types/canvas';
