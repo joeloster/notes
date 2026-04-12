@@ -83,8 +83,10 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
       checked,
     });
     currentEditor.view.dispatch(tr);
+    // Persist the change immediately
+    onUpdate(currentEditor.getHTML());
     return true;
-  }, []);
+  }, [onUpdate]);
 
   const editor = useEditor({
     extensions: [
@@ -135,11 +137,13 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   // --- Checkbox isolation: stop propagation so note doesn't drag ---
   const handleCheckboxCapture = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
-    if (
+    const isCheckboxTarget =
       target.closest('input[type="checkbox"]') ||
-      target.closest('label')?.querySelector('input[type="checkbox"]')
-    ) {
+      target.closest('label')?.querySelector('input[type="checkbox"]') ||
+      target.closest('li[data-type="taskItem"]')?.querySelector('input[type="checkbox"]');
+    if (isCheckboxTarget) {
       e.stopPropagation();
+      // Never preventDefault — let the native toggle work
     }
   }, []);
 

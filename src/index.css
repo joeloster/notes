@@ -143,3 +143,14 @@ All colors MUST be HSL.
 .ProseMirror strong {
   font-weight: 700;
 }
+
+/* Ensure checkboxes are always clickable even when editor is non-editable */
+.ProseMirror ul[data-type="taskList"] input[type="checkbox"] {
+  pointer-events: auto;
+  position: relative;
+  z-index: 1;
+}
+
+.ProseMirror ul[data-type="taskList"] label {
+  pointer-events: auto;
+}
