@@ -19,6 +19,13 @@ export const InfiniteCanvas: React.FC = () => {
   const [isNoteEditing, setIsNoteEditing] = useState(false);
   const [highlightedNoteId, setHighlightedNoteId] = useState<string | null>(null);
 
+  const {
+    notes, view, selectedNoteId, activeColor,
+    setActiveColor, setSelectedNoteId, setView,
+    addNote, updateNote, deleteNote, moveNote, resizeNote,
+    zoom, resetView,
+  } = useCanvasState();
+
   const handleNavigateToNote = useCallback((noteId: string) => {
     const note = notes.find(n => n.id === noteId);
     if (!note) return;
@@ -27,13 +34,6 @@ export const InfiniteCanvas: React.FC = () => {
     setView(prev => ({ ...prev, x: targetX, y: targetY }));
     setSelectedNoteId(noteId);
   }, [notes, canvasSize, view.scale, setView, setSelectedNoteId]);
-
-  const {
-    notes, view, selectedNoteId, activeColor,
-    setActiveColor, setSelectedNoteId, setView,
-    addNote, updateNote, deleteNote, moveNote, resizeNote,
-    zoom, resetView, pan,
-  } = useCanvasState();
 
   const handleEditingChange = useCallback((editing: boolean, editor: Editor | null) => {
     setIsNoteEditing(editing);

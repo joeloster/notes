@@ -8,6 +8,7 @@ interface StickyNoteProps {
   note: Note;
   scale: number;
   isSelected: boolean;
+  isHighlighted?: boolean;
   onSelect: () => void;
   onMove: (x: number, y: number) => void;
   onResize: (w: number, h: number) => void;
