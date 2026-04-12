@@ -129,8 +129,18 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
     setQuery(word);
     setDebouncedQuery(word);
     setShowSuggestions(false);
-    inputRef.current?.focus();
-  }, []);
+
+    // Compute results immediately and navigate to the first match
+    const q = word.toLowerCase();
+    const matchingIds = notes.filter(n => stripHtml(n.content).toLowerCase().includes(q)).map(n => n.id);
+    if (matchingIds.length > 0) {
+      setCurrentIndex(0);
+      onHighlightNote(matchingIds[0]);
+      onNavigateToNote(matchingIds[0]);
+    }
+
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, [notes, onHighlightNote, onNavigateToNote]);
 
   // Keyboard
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
