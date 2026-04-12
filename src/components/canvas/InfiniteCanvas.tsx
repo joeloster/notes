@@ -2,6 +2,7 @@ import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { useCanvasState } from '@/hooks/useCanvasState';
 import { StickyNote } from './StickyNote';
 import { CanvasToolbar } from './CanvasToolbar';
+import { CanvasSearch } from './CanvasSearch';
 import { MiniMap } from './MiniMap';
 import { NoteEditorToolbar } from './NoteEditorToolbar';
 import { GRID_SIZE } from '@/types/canvas';
@@ -16,13 +17,24 @@ export const InfiniteCanvas: React.FC = () => {
   const [canvasSize, setCanvasSize] = useState({ w: window.innerWidth, h: window.innerHeight });
   const [activeEditor, setActiveEditor] = useState<Editor | null>(null);
   const [isNoteEditing, setIsNoteEditing] = useState(false);
+  const [highlightedNoteId, setHighlightedNoteId] = useState<string | null>(null);
 
   const {
     notes, view, selectedNoteId, activeColor,
     setActiveColor, setSelectedNoteId, setView,
     addNote, updateNote, deleteNote, moveNote, resizeNote,
-    zoom, resetView, pan,
+    zoom, resetView,
   } = useCanvasState();
+
+  const handleNavigateToNote = useCallback((noteId: string) => {
+    const note = notes.find(n => n.id === noteId);
+    if (!note) return;
+    const scale = 1;
+    const targetX = canvasSize.w / 2 - (note.x + note.width / 2) * scale;
+    const targetY = canvasSize.h / 2 - (note.y + note.height / 2) * scale;
+    setView({ x: targetX, y: targetY, scale });
+    // Don't select the note — this would steal focus from the search bar
+  }, [notes, canvasSize, setView]);
 
   const handleEditingChange = useCallback((editing: boolean, editor: Editor | null) => {
     setIsNoteEditing(editing);
@@ -53,6 +65,7 @@ export const InfiniteCanvas: React.FC = () => {
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).closest('.ProseMirror')) return;
+      if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return;
       if (e.key === 'n' || e.key === 'N') {
         const cx = (canvasSize.w / 2 - view.x) / view.scale;
         const cy = (canvasSize.h / 2 - view.y) / view.scale;
@@ -134,6 +147,14 @@ export const InfiniteCanvas: React.FC = () => {
       {/* Floating text toolbar */}
       <NoteEditorToolbar editor={activeEditor} visible={isNoteEditing} />
 
+      {/* Search */}
+      <CanvasSearch
+        notes={notes}
+        onNavigateToNote={handleNavigateToNote}
+        highlightedNoteId={highlightedNoteId}
+        onHighlightNote={setHighlightedNoteId}
+      />
+
       {/* Grid background */}
       <div
         className="absolute inset-0 pointer-events-auto canvas-grid"
@@ -163,6 +184,7 @@ export const InfiniteCanvas: React.FC = () => {
             note={note}
             scale={view.scale}
             isSelected={selectedNoteId === note.id}
+            isHighlighted={highlightedNoteId === note.id}
             onSelect={() => setSelectedNoteId(note.id)}
             onMove={(x, y) => moveNote(note.id, x, y)}
             onResize={(w, h) => resizeNote(note.id, w, h)}
