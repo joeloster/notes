@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Editor } from '@tiptap/react';
 import { Bold, List, ListOrdered, CheckSquare } from 'lucide-react';
 
@@ -16,95 +16,99 @@ const TEXT_SIZES = [
 type TextSize = (typeof TEXT_SIZES)[number]['value'];
 
 interface ToolbarState {
-  bulletList: boolean;
   bold: boolean;
+  bulletList: boolean;
   orderedList: boolean;
   taskList: boolean;
   textSize: TextSize;
 }
 
-const getTextSize = (editor: Editor | null): TextSize => {
-  if (!editor) return 'medium';
+/** Read the current formatting state from the editor */
+const readEditorState = (editor: Editor): ToolbarState => {
   const attrs = editor.getAttributes('textStyle');
-  const fs = attrs?.fontSize as TextSize | undefined;
-  return fs || 'medium';
+  const fs = (attrs?.fontSize as TextSize) || 'medium';
+  return {
+    bold: editor.isActive('bold'),
+    bulletList: editor.isActive('bulletList'),
+    orderedList: editor.isActive('orderedList'),
+    taskList: editor.isActive('taskList'),
+    textSize: fs,
+  };
 };
 
-const getToolbarState = (editor: Editor | null): ToolbarState => ({
-  bulletList: editor?.isActive('bulletList') ?? false,
-  bold: editor?.isActive('bold') ?? false,
-  orderedList: editor?.isActive('orderedList') ?? false,
-  taskList: editor?.isActive('taskList') ?? false,
-  textSize: getTextSize(editor),
-});
-
 export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({ editor, visible }) => {
-  // Use a ref to track overridden size so transaction events don't clobber it
-  const overrideRef = React.useRef<TextSize | null>(null);
+  const [state, setState] = useState<ToolbarState>({
+    bold: false, bulletList: false, orderedList: false, taskList: false, textSize: 'medium',
+  });
 
-  const [toolbarState, setToolbarState] = useState<ToolbarState>(() => getToolbarState(editor));
+  // Track when we've done an optimistic update so editor transactions
+  // don't revert the UI within a grace window
+  const lockUntilRef = useRef(0);
 
-  const syncToolbarState = useCallback(() => {
-    const state = getToolbarState(editor);
-    // If we have an override, keep it until the editor catches up
-    if (overrideRef.current !== null) {
-      state.textSize = overrideRef.current;
-    }
-    setToolbarState(state);
+  const setOptimistic = useCallback((partial: Partial<ToolbarState>) => {
+    // Lock for 150ms — ignore editor-driven syncs during this window
+    lockUntilRef.current = Date.now() + 150;
+    setState(prev => ({ ...prev, ...partial }));
+  }, []);
+
+  const syncFromEditor = useCallback(() => {
+    if (!editor) return;
+    // If inside the grace window, skip — our optimistic state is canonical
+    if (Date.now() < lockUntilRef.current) return;
+    setState(readEditorState(editor));
   }, [editor]);
 
   useEffect(() => {
-    syncToolbarState();
-
     if (!editor) return;
+    // Initial sync
+    setState(readEditorState(editor));
 
-    const handleEditorStateChange = () => {
-      // Clear override once editor state reflects the change
-      if (overrideRef.current !== null) {
-        const editorSize = getTextSize(editor);
-        if (editorSize === overrideRef.current) {
-          overrideRef.current = null;
-        }
-      }
-      syncToolbarState();
-    };
-
-    editor.on('transaction', handleEditorStateChange);
-    editor.on('selectionUpdate', handleEditorStateChange);
-
+    const handler = () => syncFromEditor();
+    editor.on('transaction', handler);
+    editor.on('selectionUpdate', handler);
     return () => {
-      editor.off('transaction', handleEditorStateChange);
-      editor.off('selectionUpdate', handleEditorStateChange);
+      editor.off('transaction', handler);
+      editor.off('selectionUpdate', handler);
     };
-  }, [editor, syncToolbarState]);
+  }, [editor, syncFromEditor]);
 
   if (!editor || !visible) return null;
 
-  const currentSize = toolbarState.textSize;
+  const prevent = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); };
 
-  const runCommand = (command: () => void) => (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    command();
+  const handleBold = (e: React.MouseEvent) => {
+    prevent(e);
+    const next = !state.bold;
+    setOptimistic({ bold: next });
+    editor.chain().focus().toggleBold().run();
   };
 
-  const setFontSize = (size: TextSize) => {
-    // Set override immediately for instant feedback
-    overrideRef.current = size;
-    setToolbarState(prev => ({ ...prev, textSize: size }));
-
-    // Apply in a single chain: unset then set
+  const handleSize = (size: TextSize) => (e: React.MouseEvent) => {
+    prevent(e);
+    setOptimistic({ textSize: size });
     if (size === 'medium') {
       editor.chain().focus().unsetMark('textStyle').run();
     } else {
       editor.chain().focus().unsetMark('textStyle').setMark('textStyle', { fontSize: size }).run();
     }
-
-    // Clear override after a short delay as fallback
-    setTimeout(() => {
-      overrideRef.current = null;
-      syncToolbarState();
-    }, 100);
   };
+
+  const handleList = (type: 'bulletList' | 'orderedList' | 'taskList') => (e: React.MouseEvent) => {
+    prevent(e);
+    const next = !state[type];
+    // Lists are mutually exclusive — deactivate others
+    const listUpdate: Partial<ToolbarState> = { bulletList: false, orderedList: false, taskList: false, [type]: next };
+    setOptimistic(listUpdate);
+    const cmds: Record<string, () => void> = {
+      bulletList: () => editor.chain().focus().toggleBulletList().run(),
+      orderedList: () => editor.chain().focus().toggleOrderedList().run(),
+      taskList: () => editor.chain().focus().toggleTaskList().run(),
+    };
+    cmds[type]();
+  };
+
+  const btn = (active: boolean) =>
+    `p-1.5 rounded-md transition-colors ${active ? 'bg-primary text-primary-foreground' : 'text-foreground/70 hover:bg-muted'}`;
 
   return (
     <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] animate-fade-in">
@@ -114,9 +118,9 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({ editor, vi
           {TEXT_SIZES.map(s => (
             <button
               key={s.value}
-              onMouseDown={runCommand(() => setFontSize(s.value))}
+              onMouseDown={handleSize(s.value)}
               className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                currentSize === s.value
+                state.textSize === s.value
                   ? 'bg-primary text-primary-foreground'
                   : 'text-foreground/70 hover:bg-muted'
               }`}
@@ -128,66 +132,19 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({ editor, vi
 
         <div className="w-px h-5 bg-border mx-1" />
 
-        {/* Bold */}
-        <button
-          onMouseDown={runCommand(() => {
-            editor.chain().focus().toggleBold().run();
-            setToolbarState(prev => ({ ...prev, bold: !prev.bold }));
-          })}
-          className={`p-1.5 rounded-md transition-colors ${
-            toolbarState.bold
-              ? 'bg-primary text-primary-foreground'
-              : 'text-foreground/70 hover:bg-muted'
-          }`}
-          title="Bold"
-        >
+        <button onMouseDown={handleBold} className={btn(state.bold)} title="Bold">
           <Bold size={15} />
         </button>
 
         <div className="w-px h-5 bg-border mx-1" />
 
-        {/* Bullet List */}
-        <button
-          onMouseDown={runCommand(() => {
-            editor.chain().focus().toggleBulletList().run();
-          })}
-          className={`p-1.5 rounded-md transition-colors ${
-            toolbarState.bulletList
-              ? 'bg-primary text-primary-foreground'
-              : 'text-foreground/70 hover:bg-muted'
-          }`}
-          title="Bullet List"
-        >
+        <button onMouseDown={handleList('bulletList')} className={btn(state.bulletList)} title="Bullet List">
           <List size={15} />
         </button>
-
-        {/* Numbered List */}
-        <button
-          onMouseDown={runCommand(() => {
-            editor.chain().focus().toggleOrderedList().run();
-          })}
-          className={`p-1.5 rounded-md transition-colors ${
-            toolbarState.orderedList
-              ? 'bg-primary text-primary-foreground'
-              : 'text-foreground/70 hover:bg-muted'
-          }`}
-          title="Numbered List"
-        >
+        <button onMouseDown={handleList('orderedList')} className={btn(state.orderedList)} title="Numbered List">
           <ListOrdered size={15} />
         </button>
-
-        {/* Checkbox List */}
-        <button
-          onMouseDown={runCommand(() => {
-            editor.chain().focus().toggleTaskList().run();
-          })}
-          className={`p-1.5 rounded-md transition-colors ${
-            toolbarState.taskList
-              ? 'bg-primary text-primary-foreground'
-              : 'text-foreground/70 hover:bg-muted'
-          }`}
-          title="Checkbox List"
-        >
+        <button onMouseDown={handleList('taskList')} className={btn(state.taskList)} title="Checkbox List">
           <CheckSquare size={15} />
         </button>
       </div>
