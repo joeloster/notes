@@ -90,7 +90,7 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     // Skip drag for interactive elements and contenteditable (allow text selection)
-    if (target.closest('button') || target.closest('input') || target.closest('[role="button"]') || target.closest('[contenteditable]') || target.matches('input[type="checkbox"]') || target.closest('label.chakra-checkbox, li[data-type="taskItem"]  input')) return;
+    if (target.closest('button') || target.closest('input') || target.closest('[role="button"]') || target.closest('[contenteditable]')) return;
     e.stopPropagation();
     onSelect();
     dragThreshold.current = { startX: e.clientX, startY: e.clientY, moved: false };
