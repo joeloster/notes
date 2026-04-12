@@ -29,11 +29,12 @@ export const InfiniteCanvas: React.FC = () => {
   const handleNavigateToNote = useCallback((noteId: string) => {
     const note = notes.find(n => n.id === noteId);
     if (!note) return;
-    const targetX = canvasSize.w / 2 - (note.x + note.width / 2) * view.scale;
-    const targetY = canvasSize.h / 2 - (note.y + note.height / 2) * view.scale;
-    setView(prev => ({ ...prev, x: targetX, y: targetY }));
+    const scale = 1;
+    const targetX = canvasSize.w / 2 - (note.x + note.width / 2) * scale;
+    const targetY = canvasSize.h / 2 - (note.y + note.height / 2) * scale;
+    setView({ x: targetX, y: targetY, scale });
     setSelectedNoteId(noteId);
-  }, [notes, canvasSize, view.scale, setView, setSelectedNoteId]);
+  }, [notes, canvasSize, setView, setSelectedNoteId]);
 
   const handleEditingChange = useCallback((editing: boolean, editor: Editor | null) => {
     setIsNoteEditing(editing);
@@ -64,6 +65,7 @@ export const InfiniteCanvas: React.FC = () => {
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).closest('.ProseMirror')) return;
+      if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return;
       if (e.key === 'n' || e.key === 'N') {
         const cx = (canvasSize.w / 2 - view.x) / view.scale;
         const cy = (canvasSize.h / 2 - view.y) / view.scale;

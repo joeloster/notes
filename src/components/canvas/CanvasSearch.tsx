@@ -110,9 +110,9 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
   }, [isOpen, open]);
 
   return (
-    <div ref={containerRef} className="fixed top-4 right-4 z-50 flex items-center gap-2">
+    <div ref={containerRef} className="fixed top-4 right-4 z-50 flex items-center gap-2" onKeyDown={e => e.stopPropagation()} onKeyUp={e => e.stopPropagation()}>
       {isOpen ? (
-        <div className="flex items-center gap-1 bg-toolbar-bg border border-toolbar-border rounded-2xl px-3 py-1.5 shadow-[0_8px_32px_-8px_hsl(var(--toolbar-shadow)/0.15)] animate-scale-in">
+        <div className="flex items-center gap-1 bg-toolbar-bg border border-toolbar-border rounded-2xl px-3 py-1.5 shadow-[0_8px_32px_-8px_hsl(var(--toolbar-shadow)/0.15)] animate-scale-in w-[340px]">
           <Search size={16} className="text-muted-foreground shrink-0" />
           <input
             ref={inputRef}
@@ -120,27 +120,25 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search notes..."
-            className="bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground w-48"
+            className="bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground flex-1 min-w-0"
           />
 
-          {debouncedQuery.trim() && (
-            <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-              {results.length === 0
+          <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0 w-16 text-right">
+            {debouncedQuery.trim()
+              ? results.length === 0
                 ? 'No results'
-                : `${currentIndex + 1} of ${results.length}`}
-            </span>
-          )}
+                : `${currentIndex + 1} of ${results.length}`
+              : ''}
+          </span>
 
-          {results.length > 1 && (
-            <div className="flex items-center gap-0.5 shrink-0">
-              <button onClick={handlePrev} className="p-1 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
-                <ChevronUp size={14} />
-              </button>
-              <button onClick={handleNext} className="p-1 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
-                <ChevronDown size={14} />
-              </button>
-            </div>
-          )}
+          <div className="flex items-center gap-0.5 shrink-0">
+            <button onClick={handlePrev} disabled={results.length <= 1} className="p-1 rounded-lg hover:bg-muted transition-colors text-muted-foreground disabled:opacity-30">
+              <ChevronUp size={14} />
+            </button>
+            <button onClick={handleNext} disabled={results.length <= 1} className="p-1 rounded-lg hover:bg-muted transition-colors text-muted-foreground disabled:opacity-30">
+              <ChevronDown size={14} />
+            </button>
+          </div>
 
           <button onClick={close} className="p-1 rounded-lg hover:bg-muted transition-colors text-muted-foreground shrink-0">
             <X size={14} />
