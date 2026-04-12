@@ -151,8 +151,16 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
     setQuery(word);
     setDebouncedQuery(word);
     setCurrentIndex(0);
-    setHasNavigated(false);
+    setHasNavigated(true);
     setShowSuggestions(false);
+
+    // Navigate to first match immediately
+    const q = word.toLowerCase();
+    const matchingIds = notes.filter(n => stripHtml(n.content).toLowerCase().includes(q)).map(n => n.id);
+    if (matchingIds.length > 0) {
+      onHighlightNote(matchingIds[0]);
+      onNavigateToNote(matchingIds[0]);
+    }
 
     const focusInput = () => {
       inputRef.current?.focus({ preventScroll: true });
@@ -161,7 +169,7 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
 
     focusInput();
     requestAnimationFrame(focusInput);
-  }, []);
+  }, [notes, onHighlightNote, onNavigateToNote]);
 
   // Keyboard
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
