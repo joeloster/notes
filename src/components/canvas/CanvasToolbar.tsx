@@ -20,10 +20,10 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
       {/* Add note */}
       <button
         onClick={onAddNote}
-        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium"
+        className="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium"
       >
         <Plus size={16} />
-        Add Note
+        <span className="hidden sm:inline">Add Note</span>
       </button>
 
       <div className="w-px h-8 bg-border mx-1" />
