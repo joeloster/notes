@@ -114,6 +114,7 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({ editor, vi
         <button
           onMouseDown={runCommand(() => {
             editor.chain().focus().toggleBold().run();
+            setToolbarState(prev => ({ ...prev, bold: !prev.bold }));
           })}
           className={`p-1.5 rounded-md transition-colors ${
             toolbarState.bold
