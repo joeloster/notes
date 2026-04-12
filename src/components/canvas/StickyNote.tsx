@@ -61,7 +61,8 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
     const handleWheel = (e: WheelEvent) => {
       if (!isSelected) return;
 
-      const scrollContainer = el.querySelector('[data-note-editor-scroll="true"]') as HTMLDivElement | null;
+      const scrollContainer = el.querySelector('.note-editor-scroll .tiptap, .note-editor-scroll .ProseMirror') as HTMLDivElement 
+        || el.querySelector('.note-editor-scroll') as HTMLDivElement;
       const hasOverflow = scrollContainer ? scrollContainer.scrollHeight > scrollContainer.clientHeight + 1 : false;
 
       if (!scrollContainer || !hasOverflow) return;
