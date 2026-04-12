@@ -23,12 +23,19 @@ interface ToolbarState {
   textSize: TextSize;
 }
 
+const getTextSize = (editor: Editor | null): TextSize => {
+  if (!editor) return 'medium';
+  const attrs = editor.getAttributes('textStyle');
+  const fs = attrs?.fontSize as TextSize | undefined;
+  return fs || 'medium';
+};
+
 const getToolbarState = (editor: Editor | null): ToolbarState => ({
   bulletList: editor?.isActive('bulletList') ?? false,
   bold: editor?.isActive('bold') ?? false,
   orderedList: editor?.isActive('orderedList') ?? false,
   taskList: editor?.isActive('taskList') ?? false,
-  textSize: (editor?.getAttributes('textStyle')?.fontSize as TextSize | undefined) || 'medium',
+  textSize: getTextSize(editor),
 });
 
 export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({ editor, visible }) => {
@@ -67,17 +74,18 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({ editor, vi
   const runCommand = (command: () => void) => (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     command();
-    syncToolbarState();
+    // Force immediate state sync after command
+    requestAnimationFrame(syncToolbarState);
   };
 
   const setFontSize = (size: TextSize) => {
-    if (size === 'medium') {
-      editor.chain().focus().unsetMark('textStyle').run();
-    } else {
+    // Always unset first, then set if not medium
+    editor.chain().focus().unsetMark('textStyle').run();
+    if (size !== 'medium') {
       editor.chain().focus().setMark('textStyle', { fontSize: size }).run();
     }
-
-    syncToolbarState();
+    // Immediate optimistic update
+    setToolbarState(prev => ({ ...prev, textSize: size }));
   };
 
   return (
