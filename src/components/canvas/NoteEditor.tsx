@@ -106,7 +106,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     <EditorContent
       editor={editor}
       data-note-editor-scroll="true"
-      className={`note-editor-scroll w-full h-full ${isEditing ? 'cursor-text' : 'cursor-grab pointer-events-none'}`}
+      className={`note-editor-scroll w-full h-full ${isEditing ? 'cursor-text' : 'cursor-grab'}`}
       style={{
         overflowX: 'hidden',
         overflowY: isEditing || isFocused ? 'auto' : 'hidden',
