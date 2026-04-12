@@ -48,12 +48,41 @@ interface NoteEditorProps {
   onEditorReady: (editor: Editor | null) => void;
 }
 
+const getCheckboxInput = (target: EventTarget | null) => {
+  if (!(target instanceof HTMLElement)) return null;
+  if (target instanceof HTMLInputElement && target.type === 'checkbox') return target;
+  return target.closest('label')?.querySelector('input[type="checkbox"]') ?? null;
+};
+
 const isCheckboxInteractionTarget = (target: EventTarget | null): target is HTMLElement => (
   target instanceof HTMLElement && (
     target.closest('input[type="checkbox"]') !== null
     || Boolean(target.closest('label')?.querySelector('input[type="checkbox"]'))
   )
 );
+
+const updateTaskItemCheckedInHtml = (html: string, checkboxIndex: number, checked: boolean) => {
+  if (checkboxIndex < 0) return null;
+
+  const parser = new DOMParser();
+  const documentFragment = parser.parseFromString(html, 'text/html');
+  const taskItems = Array.from(documentFragment.querySelectorAll('li[data-type="taskItem"]'));
+  const taskItem = taskItems[checkboxIndex];
+
+  if (!taskItem) return null;
+
+  taskItem.setAttribute('data-checked', checked ? 'true' : 'false');
+
+  const checkbox = taskItem.querySelector('input[type="checkbox"]');
+  if (checkbox instanceof HTMLInputElement) {
+    checkbox.checked = checked;
+
+    if (checked) checkbox.setAttribute('checked', 'checked');
+    else checkbox.removeAttribute('checked');
+  }
+
+  return documentFragment.body.innerHTML;
+};
 
 export const NoteEditor: React.FC<NoteEditorProps> = ({
   content,
@@ -66,67 +95,22 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<Editor | null>(null);
-  const lastCheckboxTaskItemRef = useRef<HTMLElement | null>(null);
-
-  const resolveTaskItemPosition = useCallback((taskItemElement: HTMLElement) => {
-    const currentEditor = editorRef.current;
-    if (!currentEditor) return null;
-
-    const domCandidates = [
-      taskItemElement,
-      taskItemElement.querySelector('div'),
-    ].filter((candidate): candidate is HTMLElement => candidate instanceof HTMLElement);
-
-    for (const domNode of domCandidates) {
-      for (const offset of [0, domNode.childNodes.length]) {
-        try {
-          const rawPosition = currentEditor.view.posAtDOM(domNode, offset);
-          const boundedPosition = Math.max(0, Math.min(rawPosition, currentEditor.state.doc.content.size));
-
-          for (const candidatePosition of [boundedPosition, boundedPosition - 1, boundedPosition + 1]) {
-            if (candidatePosition < 0) continue;
-
-            const candidateNode = currentEditor.state.doc.nodeAt(candidatePosition);
-            if (candidateNode?.type.name === 'taskItem') return candidatePosition;
-          }
-
-          const resolvedPosition = currentEditor.state.doc.resolve(boundedPosition);
-          for (let depth = resolvedPosition.depth; depth > 0; depth -= 1) {
-            if (resolvedPosition.node(depth).type.name === 'taskItem') {
-              return resolvedPosition.before(depth);
-            }
-          }
-        } catch {
-          continue;
-        }
-      }
-    }
-
-    return null;
-  }, []);
+  const lastCheckboxIndexRef = useRef<number | null>(null);
 
   // Allow checkbox toggling in read-only mode
   const handleReadOnlyChecked = useCallback((_node: ProseMirrorNode, checked: boolean) => {
     const currentEditor = editorRef.current;
-    const taskItemElement = lastCheckboxTaskItemRef.current;
+    const checkboxIndex = lastCheckboxIndexRef.current;
     if (!currentEditor) return false;
-    if (!taskItemElement) return false;
+    if (checkboxIndex === null) return false;
 
-    const position = resolveTaskItemPosition(taskItemElement);
-    if (position === null) return false;
+    const nextHtml = updateTaskItemCheckedInHtml(currentEditor.getHTML(), checkboxIndex, checked);
+    if (!nextHtml) return false;
 
-    const currentNode = currentEditor.state.doc.nodeAt(position);
-    if (!currentNode || currentNode.type.name !== 'taskItem') return false;
-
-    const tr = currentEditor.state.tr.setNodeMarkup(position, undefined, {
-      ...currentNode.attrs,
-      checked,
-    });
-    currentEditor.view.dispatch(tr);
-    // Persist the change immediately
-    onUpdate(currentEditor.getHTML());
+    currentEditor.commands.setContent(nextHtml, false);
+    onUpdate(nextHtml);
     return true;
-  }, [onUpdate, resolveTaskItemPosition]);
+  }, [onUpdate]);
 
   const editor = useEditor({
     extensions: [
@@ -178,7 +162,13 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     const target = e.target as HTMLElement | null;
     if (!isCheckboxInteractionTarget(target)) return;
 
-    lastCheckboxTaskItemRef.current = target.closest('li[data-checked], li') as HTMLElement | null;
+    const checkbox = getCheckboxInput(target);
+    const container = containerRef.current;
+    if (!checkbox || !container) return;
+
+    const allCheckboxes = Array.from(container.querySelectorAll('input[type="checkbox"]'));
+    lastCheckboxIndexRef.current = allCheckboxes.indexOf(checkbox);
+    e.stopPropagation();
   }, []);
 
   // --- Scroll isolation: when focused & scrollable, trap wheel events ---
