@@ -11,9 +11,13 @@ interface CanvasSearchProps {
 }
 
 function stripHtml(html: string): string {
+  // Replace block-level tags and <br> with spaces before extracting text
+  const withSpaces = html.replace(/<\/(p|div|li|br|h[1-6])>/gi, ' ').replace(/<br\s*\/?>/gi, ' ');
   const tmp = document.createElement('div');
-  tmp.innerHTML = html;
-  return tmp.textContent || tmp.innerText || '';
+  tmp.innerHTML = withSpaces;
+  const text = tmp.textContent || tmp.innerText || '';
+  // Normalize newlines and multiple spaces
+  return text.replace(/[\n\r]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 /** Extract unique words from notes that match the query */
@@ -139,8 +143,11 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
       onNavigateToNote(matchingIds[0]);
     }
 
-    // Re-focus after navigation (which may steal focus to the note)
+    // Force focus back with multiple attempts to overcome any focus steal
+    inputRef.current?.focus();
     setTimeout(() => inputRef.current?.focus(), 0);
+    setTimeout(() => inputRef.current?.focus(), 50);
+    setTimeout(() => inputRef.current?.focus(), 150);
   }, [notes, onHighlightNote, onNavigateToNote]);
 
   // Keyboard

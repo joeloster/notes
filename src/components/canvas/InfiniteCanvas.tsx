@@ -33,8 +33,8 @@ export const InfiniteCanvas: React.FC = () => {
     const targetX = canvasSize.w / 2 - (note.x + note.width / 2) * scale;
     const targetY = canvasSize.h / 2 - (note.y + note.height / 2) * scale;
     setView({ x: targetX, y: targetY, scale });
-    setSelectedNoteId(noteId);
-  }, [notes, canvasSize, setView, setSelectedNoteId]);
+    // Don't select the note — this would steal focus from the search bar
+  }, [notes, canvasSize, setView]);
 
   const handleEditingChange = useCallback((editing: boolean, editor: Editor | null) => {
     setIsNoteEditing(editing);
