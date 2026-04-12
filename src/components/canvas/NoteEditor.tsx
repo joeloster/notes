@@ -174,14 +174,11 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     }
   }, [content, editor]);
 
-  // --- Checkbox isolation: stop propagation so note doesn't drag ---
-  const handleCheckboxCapture = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    if (isCheckboxInteractionTarget(target)) {
-      lastCheckboxTaskItemRef.current = target.closest('li[data-type="taskItem"]') as HTMLElement | null;
-      e.stopPropagation();
-      // Never preventDefault — let the native toggle work
-    }
+  const handleCheckboxPointerCapture = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement | null;
+    if (!isCheckboxInteractionTarget(target)) return;
+
+    lastCheckboxTaskItemRef.current = target.closest('li[data-checked], li') as HTMLElement | null;
   }, []);
 
   // --- Scroll isolation: when focused & scrollable, trap wheel events ---
@@ -213,8 +210,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
         overflowY: isFocused ? 'auto' : 'hidden',
         overscrollBehavior: isFocused ? 'contain' : 'auto',
       }}
-      onMouseDownCapture={handleCheckboxCapture}
-      onClickCapture={handleCheckboxCapture}
+      onPointerDownCapture={handleCheckboxPointerCapture}
       onWheelCapture={handleWheel}
     >
       <EditorContent editor={editor} className="h-full" />
