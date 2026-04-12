@@ -139,7 +139,8 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
       onNavigateToNote(matchingIds[0]);
     }
 
-    requestAnimationFrame(() => inputRef.current?.focus());
+    // Re-focus after navigation (which may steal focus to the note)
+    setTimeout(() => inputRef.current?.focus(), 0);
   }, [notes, onHighlightNote, onNavigateToNote]);
 
   // Keyboard
