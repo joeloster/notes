@@ -83,8 +83,10 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
       checked,
     });
     currentEditor.view.dispatch(tr);
+    // Persist the change immediately
+    onUpdate(currentEditor.getHTML());
     return true;
-  }, []);
+  }, [onUpdate]);
 
   const editor = useEditor({
     extensions: [
