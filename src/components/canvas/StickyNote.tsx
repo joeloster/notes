@@ -3,6 +3,7 @@ import { Note, NOTE_COLOR_MAP, NOTE_COLOR_RING_MAP, NOTE_COLORS, NoteColor } fro
 import { Trash2 } from 'lucide-react';
 import { NoteEditor } from './NoteEditor';
 import { Editor } from '@tiptap/react';
+import { isContentEditableTarget, isNoteControlTarget, isNoteEditorTarget } from './noteInteractionUtils';
 
 interface StickyNoteProps {
   note: Note;
@@ -60,43 +61,29 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
     };
   }, [onEditingChange]);
 
-  // Smart scroll: capture wheel events on the note element
-  useEffect(() => {
-    const el = noteRef.current;
-    if (!el) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      if (!isSelected) return;
-
-      const scrollContainer = el.querySelector('.note-editor-scroll .tiptap, .note-editor-scroll .ProseMirror') as HTMLDivElement 
-        || el.querySelector('.note-editor-scroll') as HTMLDivElement;
-      const hasOverflow = scrollContainer ? scrollContainer.scrollHeight > scrollContainer.clientHeight + 1 : false;
-
-      if (!scrollContainer || !hasOverflow) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-      scrollContainer.scrollTop += e.deltaY;
-      if (e.deltaX !== 0) {
-        scrollContainer.scrollLeft += e.deltaX;
-      }
-    };
-
-    el.addEventListener('wheel', handleWheel, { passive: false });
-    return () => el.removeEventListener('wheel', handleWheel);
-  }, [isSelected]);
-
   // Drag
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     // Skip drag for interactive elements and contenteditable (allow text selection)
-    if (target.closest('button') || target.closest('input') || target.closest('[role="button"]') || target.closest('[contenteditable]')) return;
+    if (isNoteControlTarget(target) || isContentEditableTarget(target)) return;
     e.stopPropagation();
     onSelect();
     dragThreshold.current = { startX: e.clientX, startY: e.clientY, moved: false };
     dragStart.current = { x: e.clientX, y: e.clientY, noteX: note.x, noteY: note.y };
     setIsDragging(true);
   }, [note.x, note.y, onSelect]);
+
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+
+    if (dragThreshold.current.moved || isEditing) return;
+    if (isNoteControlTarget(target) || !isNoteEditorTarget(target)) return;
+
+    e.stopPropagation();
+    onSelect();
+    setIsEditing(true);
+    requestAnimationFrame(() => editorRef.current?.commands.focus());
+  }, [isEditing, onSelect]);
 
   useEffect(() => {
     if (!isDragging) return;
@@ -140,6 +127,8 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (isNoteControlTarget(target)) return;
     e.stopPropagation();
     setIsEditing(true);
     setTimeout(() => editorRef.current?.commands.focus(), 0);
@@ -158,6 +147,7 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
         height: note.height,
       }}
       onMouseDown={handleMouseDown}
+      onClick={handleClick}
       onDoubleClick={handleDoubleClick}
     >
       {/* Header bar */}
@@ -197,7 +187,7 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
         <NoteEditor
           content={note.content}
           isEditing={isEditing}
-          isFocused={isSelected || isEditing}
+          isFocused={isSelected}
           onUpdate={(html) => onUpdate({ content: html })}
           onFocus={() => { setIsEditing(true); onSelect(); }}
           onBlur={() => setIsEditing(false)}
