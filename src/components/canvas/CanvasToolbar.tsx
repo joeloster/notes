@@ -21,7 +21,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   };
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 bg-toolbar-bg border border-toolbar-border rounded-2xl px-3 py-2 shadow-[0_8px_32px_-8px_hsl(var(--toolbar-shadow)/0.15)] mx-4 max-w-[calc(100vw-2rem)]">
+    <div className="fixed bottom-6 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-50 flex items-center justify-center gap-1 bg-toolbar-bg border border-toolbar-border rounded-2xl px-3 py-2 shadow-[0_8px_32px_-8px_hsl(var(--toolbar-shadow)/0.15)] w-fit mx-auto sm:mx-0">
       {/* Add note */}
       <button
         onClick={onAddNote}
