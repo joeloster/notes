@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Note, NOTE_COLOR_MAP, NOTE_COLOR_RING_MAP, NOTE_COLORS, NoteColor } from '@/types/canvas';
+import { Note, NOTE_COLOR_MAP, NOTE_COLOR_RING_MAP, NOTE_COLORS, NoteColor, SNAP_GRID } from '@/types/canvas';
 import { Trash2 } from 'lucide-react';
 import { NoteEditor } from './NoteEditor';
 import { Editor } from '@tiptap/react';
@@ -163,7 +163,20 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
       const moveY = (e.clientY - dragStart.current.y) / scale;
       onMove(dragStart.current.noteX + moveX, dragStart.current.noteY + moveY);
     };
-    const handleUp = () => setIsDragging(false);
+    const handleUp = () => {
+      if (didDrag.current) {
+        // Snap to grid on release
+        const snap = (v: number) => Math.round(v / SNAP_GRID) * SNAP_GRID;
+        const moveX = (dragStart.current.x - dragStart.current.x) === 0
+          ? undefined : undefined;
+        // Get current position from the note's last moved position
+        // We need to read the current unsnapped position and snap it
+        const rawX = dragStart.current.noteX + (lastMouse.current.x - dragStart.current.x) / scale;
+        const rawY = dragStart.current.noteY + (lastMouse.current.y - dragStart.current.y) / scale;
+        onMove(snap(rawX), snap(rawY));
+      }
+      setIsDragging(false);
+    };
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleUp);
     return () => {
