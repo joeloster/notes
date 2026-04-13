@@ -131,7 +131,6 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
     setIsOpen(true);
     setShowSuggestions(false);
     onOpenChange?.(true);
-    requestAnimationFrame(() => inputRef.current?.focus());
   }, [onOpenChange]);
 
   const close = useCallback(() => {
@@ -241,6 +240,7 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
           <div className="flex items-center gap-1 bg-toolbar-bg border border-toolbar-border rounded-2xl px-3 py-1.5 shadow-[0_8px_32px_-8px_hsl(var(--toolbar-shadow)/0.15)] animate-scale-in w-[calc(100vw-2rem)] sm:w-[340px]">
             <Search size={16} className="text-muted-foreground shrink-0" />
             <input
+              autoFocus
               ref={inputRef}
               value={query}
               onChange={handleInputChange}
