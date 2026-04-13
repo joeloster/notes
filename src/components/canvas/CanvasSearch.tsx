@@ -50,7 +50,7 @@ function getMatchingWords(notes: Note[], query: string, limit = 3): string[] {
 }
 
 export const CanvasSearch: React.FC<CanvasSearchProps> = ({
-  notes, onNavigateToNote, highlightedNoteId, onHighlightNote,
+  notes, onNavigateToNote, highlightedNoteId, onHighlightNote, onOpenChange,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
