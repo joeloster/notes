@@ -44,12 +44,6 @@ const Auth: React.FC = () => {
         <div className="max-w-lg mx-auto lg:mx-0 space-y-8">
           {/* Brand */}
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              <span className="text-sm font-medium text-primary tracking-wide uppercase">
-                Capture everything
-              </span>
-            </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground tracking-tight leading-tight">
               infinity<span className="text-primary">Notes</span>
             </h1>
