@@ -1,6 +1,7 @@
 import React from 'react';
-import { Plus, ZoomIn, ZoomOut } from 'lucide-react';
+import { Plus, ZoomIn, ZoomOut, LogOut } from 'lucide-react';
 import { NoteColor, NOTE_COLORS } from '@/types/canvas';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CanvasToolbarProps {
   activeColor: NoteColor;
@@ -15,6 +16,10 @@ interface CanvasToolbarProps {
 export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   activeColor, scale, onAddNote, onSetColor, onZoomIn, onZoomOut, onResetView,
 }) => {
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
+
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 bg-toolbar-bg border border-toolbar-border rounded-2xl px-3 py-2 shadow-[0_8px_32px_-8px_hsl(var(--toolbar-shadow)/0.15)]">
       {/* Add note */}
@@ -57,6 +62,17 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
           <ZoomIn size={16} />
         </button>
       </div>
+
+      <div className="w-px h-8 bg-border mx-1" />
+
+      {/* Sign out */}
+      <button
+        onClick={handleSignOut}
+        className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
+        title="Sign Out"
+      >
+        <LogOut size={16} />
+      </button>
     </div>
   );
 };
