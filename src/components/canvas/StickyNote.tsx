@@ -146,10 +146,10 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
     requestAnimationFrame(() => editorRef.current?.commands.focus());
   }, []);
 
-  // --- Drag movement (window listeners) ---
+  // --- Drag movement (window listeners using pointer events) ---
   useEffect(() => {
     if (!isDragging) return;
-    const handleMove = (e: MouseEvent) => {
+    const handleMove = (e: PointerEvent) => {
       const dx = Math.abs(e.clientX - dragStart.current.x);
       const dy = Math.abs(e.clientY - dragStart.current.y);
       if (!didDrag.current && dx + dy < 4) return;
@@ -175,34 +175,35 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
       }
       setIsDragging(false);
     };
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mouseup', handleUp);
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
     return () => {
-      window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('mouseup', handleUp);
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
     };
   }, [isDragging, scale, onMove, isEditing]);
 
   // --- Resize ---
-  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+  const handleResizeStart = useCallback((e: React.PointerEvent) => {
     e.stopPropagation();
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
     setIsResizing(true);
     resizeStart.current = { x: e.clientX, y: e.clientY, w: note.width, h: note.height };
   }, [note.width, note.height]);
 
   useEffect(() => {
     if (!isResizing) return;
-    const handleMove = (e: MouseEvent) => {
+    const handleMove = (e: PointerEvent) => {
       const dx = (e.clientX - resizeStart.current.x) / scale;
       const dy = (e.clientY - resizeStart.current.y) / scale;
       onResize(resizeStart.current.w + dx, resizeStart.current.h + dy);
     };
     const handleUp = () => setIsResizing(false);
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mouseup', handleUp);
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
     return () => {
-      window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('mouseup', handleUp);
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
     };
   }, [isResizing, scale, onResize]);
 
