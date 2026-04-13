@@ -45,7 +45,7 @@ const Auth: React.FC = () => {
           {/* Brand */}
           <div className="space-y-2">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground tracking-tight leading-tight">
-              infinity<span className="text-primary">Notes</span>
+              infinite<span className="text-primary">Notes</span>
             </h1>
           </div>
 
