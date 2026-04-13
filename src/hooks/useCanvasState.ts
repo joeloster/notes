@@ -80,7 +80,7 @@ export function useCanvasState(userId: string) {
 
     debounceTimers.current.set(id, setTimeout(async () => {
       debounceTimers.current.delete(id);
-      const dbUpdates: Record<string, any> = {};
+      const dbUpdates: { content?: string; color?: string } = {};
       if (updates.content !== undefined) dbUpdates.content = updates.content;
       if (updates.color !== undefined) dbUpdates.color = updates.color;
       if (Object.keys(dbUpdates).length > 0) {

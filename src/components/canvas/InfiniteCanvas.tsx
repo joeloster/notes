@@ -8,7 +8,11 @@ import { NoteEditorToolbar } from './NoteEditorToolbar';
 import { GRID_SIZE } from '@/types/canvas';
 import { Editor } from '@tiptap/react';
 
-export const InfiniteCanvas: React.FC = () => {
+interface InfiniteCanvasProps {
+  userId: string;
+}
+
+export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const isPanning = useRef(false);
   const panStart = useRef({ x: 0, y: 0 });
@@ -29,7 +33,7 @@ export const InfiniteCanvas: React.FC = () => {
     setActiveColor, setSelectedNoteId, setView,
     addNote, updateNote, deleteNote, moveNote, resizeNote,
     zoom, resetView,
-  } = useCanvasState();
+  } = useCanvasState(userId);
 
   const handleNavigateToNote = useCallback((noteId: string) => {
     const note = notes.find(n => n.id === noteId);
