@@ -156,6 +156,7 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
   }, [isOpen, close]);
 
   const handleSelectSuggestion = useCallback((word: string) => {
+    fromSuggestionRef.current = true;
     setQuery(word);
     setDebouncedQuery(word);
     setCurrentIndex(0);
