@@ -11,7 +11,9 @@ interface StickyNoteProps {
   isHighlighted?: boolean;
   onSelect: () => void;
   onMove: (x: number, y: number) => void;
+  onMoveEnd?: (x: number, y: number) => void;
   onResize: (w: number, h: number) => void;
+  onResizeEnd?: (w: number, h: number) => void;
   onUpdate: (updates: Partial<Note>) => void;
   onDelete: () => void;
   onEditingChange: (editing: boolean, editor: Editor | null) => void;
@@ -32,7 +34,7 @@ const isEditable = (el: HTMLElement) =>
   el.closest('[contenteditable="true"]') !== null;
 
 export const StickyNote: React.FC<StickyNoteProps> = ({
-  note, scale, isSelected, isHighlighted, onSelect, onMove, onResize, onUpdate, onDelete, onEditingChange,
+  note, scale, isSelected, isHighlighted, onSelect, onMove, onMoveEnd, onResize, onResizeEnd, onUpdate, onDelete, onEditingChange,
 }) => {
   // --- Single source of truth ---
   const [isEditing, setIsEditing] = useState(false);
