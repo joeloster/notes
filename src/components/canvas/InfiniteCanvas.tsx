@@ -240,7 +240,9 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
             isHighlighted={highlightedNoteId === note.id}
             onSelect={() => setSelectedNoteId(note.id)}
             onMove={(x, y) => moveNote(note.id, x, y)}
+            onMoveEnd={(x, y) => persistPosition(note.id, x, y)}
             onResize={(w, h) => resizeNote(note.id, w, h)}
+            onResizeEnd={(w, h) => persistSize(note.id, w, h)}
             onUpdate={(updates) => updateNote(note.id, updates)}
             onDelete={() => deleteNote(note.id)}
             onEditingChange={handleEditingChange}
