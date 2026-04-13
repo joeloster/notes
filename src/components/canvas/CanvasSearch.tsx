@@ -7,7 +7,7 @@ interface CanvasSearchProps {
   onNavigateToNote: (noteId: string) => void;
   highlightedNoteId: string | null;
   onHighlightNote: (noteId: string | null) => void;
-  isToolbarActive?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 function stripHtml(html: string): string {
