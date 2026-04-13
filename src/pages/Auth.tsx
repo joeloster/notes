@@ -47,9 +47,6 @@ const Auth: React.FC = () => {
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground tracking-tight leading-tight">
               infinity<span className="text-primary">Notes</span>
             </h1>
-            <p className="text-xl text-muted-foreground leading-relaxed">
-              Your infinite canvas for spatial note-taking. Capture ideas, organize thoughts, and see the big picture — all on one boundless board.
-            </p>
           </div>
 
           {/* Features */}
