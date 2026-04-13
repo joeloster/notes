@@ -207,7 +207,7 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
 
   return (
     <div
-      className={`absolute select-none transition-all duration-200 rounded-xl ${NOTE_COLOR_MAP[note.color]} ${
+      className={`absolute select-none rounded-xl ${isDragging ? '' : 'transition-all duration-200'} ${NOTE_COLOR_MAP[note.color]} ${
         isSelected ? `ring-2 ${NOTE_COLOR_RING_MAP[note.color]} shadow-lg` : 'shadow-md'
       } ${isHighlighted && !isSelected ? 'ring-2 ring-primary/60 shadow-lg shadow-primary/20' : ''} ${isDragging && didDrag.current ? 'cursor-grabbing z-50 shadow-xl' : 'cursor-grab z-10'}`}
       style={{
