@@ -228,13 +228,17 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
   return (
     <div
       ref={containerRef}
-      className="fixed top-4 right-4 z-50 flex flex-col items-end gap-0"
+      className={`fixed z-50 flex flex-col gap-0 ${
+        isOpen
+          ? 'top-4 left-1/2 -translate-x-1/2 sm:left-auto sm:right-4 sm:translate-x-0 items-center sm:items-end'
+          : 'top-4 right-4 items-end'
+      }`}
       onKeyDown={e => e.stopPropagation()}
       onKeyUp={e => e.stopPropagation()}
     >
       {isOpen ? (
         <div className="relative">
-          <div className="flex items-center gap-1 bg-toolbar-bg border border-toolbar-border rounded-2xl px-3 py-1.5 shadow-[0_8px_32px_-8px_hsl(var(--toolbar-shadow)/0.15)] animate-scale-in w-[340px]">
+          <div className="flex items-center gap-1 bg-toolbar-bg border border-toolbar-border rounded-2xl px-3 py-1.5 shadow-[0_8px_32px_-8px_hsl(var(--toolbar-shadow)/0.15)] animate-scale-in w-[calc(100vw-2rem)] sm:w-[340px]">
             <Search size={16} className="text-muted-foreground shrink-0" />
             <input
               ref={inputRef}
@@ -270,7 +274,7 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
 
           {/* Autocomplete suggestions dropdown */}
           {showSuggestions && suggestions.length > 0 && (
-            <div className="absolute top-full mt-1 right-0 w-[340px] bg-toolbar-bg border border-toolbar-border rounded-xl shadow-[0_8px_32px_-8px_hsl(var(--toolbar-shadow)/0.15)] overflow-hidden z-50">
+            <div className="absolute top-full mt-1 left-0 sm:left-auto sm:right-0 w-[calc(100vw-2rem)] sm:w-[340px] bg-toolbar-bg border border-toolbar-border rounded-xl shadow-[0_8px_32px_-8px_hsl(var(--toolbar-shadow)/0.15)] overflow-hidden z-50">
               {suggestions.map((word, i) => (
                 <div
                   key={`${word}-${i}`}
