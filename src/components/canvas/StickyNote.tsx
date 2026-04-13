@@ -85,7 +85,7 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
    * mousedown on the note container.
    * Priority: checkbox > contenteditable > controls > drag
    */
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
     const target = e.target as HTMLElement;
 
     // 1. Checkbox — let it through, block everything else
@@ -109,6 +109,7 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
 
     // 4. Everything else — start drag
     e.stopPropagation();
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
     onSelect();
     didDrag.current = false;
     dragStart.current = { x: e.clientX, y: e.clientY, noteX: note.x, noteY: note.y };
@@ -145,10 +146,10 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
     requestAnimationFrame(() => editorRef.current?.commands.focus());
   }, []);
 
-  // --- Drag movement (window listeners) ---
+  // --- Drag movement (window listeners using pointer events) ---
   useEffect(() => {
     if (!isDragging) return;
-    const handleMove = (e: MouseEvent) => {
+    const handleMove = (e: PointerEvent) => {
       const dx = Math.abs(e.clientX - dragStart.current.x);
       const dy = Math.abs(e.clientY - dragStart.current.y);
       if (!didDrag.current && dx + dy < 4) return;
@@ -174,34 +175,35 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
       }
       setIsDragging(false);
     };
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mouseup', handleUp);
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
     return () => {
-      window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('mouseup', handleUp);
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
     };
   }, [isDragging, scale, onMove, isEditing]);
 
   // --- Resize ---
-  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+  const handleResizeStart = useCallback((e: React.PointerEvent) => {
     e.stopPropagation();
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
     setIsResizing(true);
     resizeStart.current = { x: e.clientX, y: e.clientY, w: note.width, h: note.height };
   }, [note.width, note.height]);
 
   useEffect(() => {
     if (!isResizing) return;
-    const handleMove = (e: MouseEvent) => {
+    const handleMove = (e: PointerEvent) => {
       const dx = (e.clientX - resizeStart.current.x) / scale;
       const dy = (e.clientY - resizeStart.current.y) / scale;
       onResize(resizeStart.current.w + dx, resizeStart.current.h + dy);
     };
     const handleUp = () => setIsResizing(false);
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mouseup', handleUp);
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
     return () => {
-      window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('mouseup', handleUp);
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
     };
   }, [isResizing, scale, onResize]);
 
@@ -215,8 +217,9 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
         top: note.y,
         width: note.width,
         height: note.height,
+        touchAction: 'none',
       }}
-      onMouseDown={handleMouseDown}
+      onPointerDown={handlePointerDown}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
     >
@@ -268,7 +271,8 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
       {/* Resize handle */}
       <div
         className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize opacity-0 hover:opacity-100 transition-opacity"
-        onMouseDown={handleResizeStart}
+        style={{ touchAction: 'none' }}
+        onPointerDown={handleResizeStart}
       >
         <svg viewBox="0 0 16 16" className="w-full h-full text-foreground/20">
           <path d="M14 14L8 14L14 8Z" fill="currentColor" />

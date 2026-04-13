@@ -19,6 +19,11 @@ export const InfiniteCanvas: React.FC = () => {
   const [isNoteEditing, setIsNoteEditing] = useState(false);
   const [highlightedNoteId, setHighlightedNoteId] = useState<string | null>(null);
 
+  // Pinch-to-zoom state
+  const activePointers = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const lastPinchDist = useRef<number | null>(null);
+  const lastPinchCenter = useRef<{ x: number; y: number } | null>(null);
+
   const {
     notes, view, selectedNoteId, activeColor,
     setActiveColor, setSelectedNoteId, setView,
@@ -33,7 +38,6 @@ export const InfiniteCanvas: React.FC = () => {
     const targetX = canvasSize.w / 2 - (note.x + note.width / 2) * scale;
     const targetY = canvasSize.h / 2 - (note.y + note.height / 2) * scale;
     setView({ x: targetX, y: targetY, scale });
-    // Don't select the note — this would steal focus from the search bar
   }, [notes, canvasSize, setView]);
 
   const handleEditingChange = useCallback((editing: boolean, editor: Editor | null) => {
@@ -47,6 +51,7 @@ export const InfiniteCanvas: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Wheel zoom (desktop)
   useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;
@@ -62,6 +67,7 @@ export const InfiniteCanvas: React.FC = () => {
     return () => el.removeEventListener('wheel', handleWheel);
   }, [zoom]);
 
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).closest('.ProseMirror')) return;
@@ -87,17 +93,49 @@ export const InfiniteCanvas: React.FC = () => {
     y: (sy - view.y) / view.scale,
   }), [view]);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+  // --- Pointer event handlers for pan + pinch ---
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
     const target = e.target as HTMLElement;
     if (target !== canvasRef.current && !target.classList.contains('canvas-grid') && !target.classList.contains('canvas-transform')) return;
-    isPanning.current = true;
-    hasPanned.current = false;
-    mouseDownPos.current = { x: e.clientX, y: e.clientY };
-    panStart.current = { x: e.clientX - view.x, y: e.clientY - view.y };
-    setSelectedNoteId(null);
+
+    activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+
+    // Single pointer → pan
+    if (activePointers.current.size === 1) {
+      isPanning.current = true;
+      hasPanned.current = false;
+      mouseDownPos.current = { x: e.clientX, y: e.clientY };
+      panStart.current = { x: e.clientX - view.x, y: e.clientY - view.y };
+      setSelectedNoteId(null);
+    }
+
+    // Two pointers → init pinch
+    if (activePointers.current.size === 2) {
+      isPanning.current = false;
+      const pts = Array.from(activePointers.current.values());
+      lastPinchDist.current = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+      lastPinchCenter.current = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+    }
   }, [view.x, view.y, setSelectedNoteId]);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!activePointers.current.has(e.pointerId)) return;
+    activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    // Pinch-to-zoom (two pointers)
+    if (activePointers.current.size === 2 && lastPinchDist.current !== null) {
+      const pts = Array.from(activePointers.current.values());
+      const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+      const center = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+      const delta = (dist - lastPinchDist.current) * 0.005;
+      zoom(delta, center.x, center.y);
+      lastPinchDist.current = dist;
+      lastPinchCenter.current = center;
+      return;
+    }
+
+    // Single pointer → pan
     if (!isPanning.current) return;
     const dist = Math.abs(e.clientX - mouseDownPos.current.x) + Math.abs(e.clientY - mouseDownPos.current.y);
     if (dist > 3) hasPanned.current = true;
@@ -106,10 +144,17 @@ export const InfiniteCanvas: React.FC = () => {
       x: e.clientX - panStart.current.x,
       y: e.clientY - panStart.current.y,
     }));
-  }, [setView]);
+  }, [setView, zoom]);
 
-  const handleMouseUp = useCallback(() => {
-    isPanning.current = false;
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    activePointers.current.delete(e.pointerId);
+    if (activePointers.current.size < 2) {
+      lastPinchDist.current = null;
+      lastPinchCenter.current = null;
+    }
+    if (activePointers.current.size === 0) {
+      isPanning.current = false;
+    }
   }, []);
 
   const handleDoubleClick = useCallback((e: React.MouseEvent) => {
@@ -137,11 +182,15 @@ export const InfiniteCanvas: React.FC = () => {
     <div
       ref={canvasRef}
       className="w-screen h-screen overflow-hidden bg-canvas-bg select-none"
-      style={{ cursor: isPanning.current ? 'grabbing' : 'default' }}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      style={{
+        cursor: isPanning.current ? 'grabbing' : 'default',
+        touchAction: 'none',
+      }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
+      onPointerCancel={handlePointerUp}
       onDoubleClick={handleDoubleClick}
     >
       {/* Floating text toolbar */}
