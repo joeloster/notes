@@ -217,6 +217,7 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
         top: note.y,
         width: note.width,
         height: note.height,
+        touchAction: 'none',
       }}
       onPointerDown={handlePointerDown}
       onClick={handleClick}
