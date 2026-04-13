@@ -29,9 +29,9 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
   const lastPinchCenter = useRef<{ x: number; y: number } | null>(null);
 
   const {
-    notes, view, selectedNoteId, activeColor,
+    notes, view, selectedNoteId, activeColor, loaded,
     setActiveColor, setSelectedNoteId, setView,
-    addNote, updateNote, deleteNote, moveNote, resizeNote,
+    addNote, updateNote, deleteNote, moveNote, persistPosition, resizeNote, persistSize,
     zoom, resetView,
   } = useCanvasState(userId);
 
