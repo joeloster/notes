@@ -1,28 +1,74 @@
 
 
-## Plan: Free drag with snap-on-release
+## Plan: Auth + Landing Page + Persistent Notes with Lovable Cloud
 
-**What changes**: Notes move freely (pixel-perfect) while being dragged, then snap to the grid when released.
+### Overview
+Enable Lovable Cloud (Supabase), create a combined landing/auth page, protect the canvas behind auth, and persist notes to the database per user.
 
-### Changes
+### 1. Enable Lovable Cloud
+- Activate Lovable Cloud to provision Supabase (database + auth)
 
-**1. `src/components/canvas/StickyNote.tsx`** — Drag handler changes:
-- During drag (`handleMove`): call `onMove` with raw (unsnapped) coordinates
-- On release (`handleUp`): call `onMove` with snapped coordinates before ending the drag
+### 2. Database Migration
+Create `notes` table:
+```sql
+create table public.notes (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade not null,
+  x float not null default 0,
+  y float not null default 0,
+  width float not null default 220,
+  height float not null default 180,
+  content text not null default '',
+  color text not null default 'yellow',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
 
-Currently `onMove` calls `moveNote` in the hook, which snaps internally. We need to either:
-- Add a separate `onMoveEnd` callback that snaps, while `onMove` passes raw values, OR
-- Remove snapping from `moveNote` in the hook and snap only on mouse-up in `StickyNote`
+alter table public.notes enable row level security;
 
-**Simplest approach** — remove `snapToGrid` from `moveNote` in the hook, and snap in the component on mouse-up:
+create policy "Users manage own notes" on public.notes
+  for all to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+```
 
-**2. `src/hooks/useCanvasState.ts`** — `moveNote`:
-- Remove `snapToGrid` wrapping so it accepts raw coordinates during drag
+No profiles table needed — we only need auth identity + notes.
 
-**3. `src/components/canvas/StickyNote.tsx`** — mouse-up handler:
-- Import `SNAP_GRID` from types
-- Add a local `snapToGrid` helper
-- In `handleUp`, call `onMove` with snapped coordinates before setting `isDragging(false)`
+### 3. Auth + Landing Page (`src/pages/Auth.tsx`)
+A single page that serves as both landing and auth:
+- App name/tagline at top
+- Brief description of the sticky notes canvas
+- Toggle between Sign In and Sign Up forms (email + password)
+- Clean design matching existing color scheme (primary blue, warm background)
+- On successful auth, redirect to `/`
 
-This keeps the same snapping on release for resize too (already works via `resizeNote` in the hook — that can stay as-is since resize is less noticeable).
+### 4. Route Protection (`src/App.tsx`)
+- Add auth state listener using Supabase `onAuthStateChange`
+- If not authenticated: show Auth page
+- If authenticated: show InfiniteCanvas
+- Add a sign-out button to the canvas toolbar
+
+### 5. Refactor `useCanvasState.ts` for Persistence
+- Accept `userId` parameter
+- **On mount**: fetch notes from `notes` table where `user_id = userId`
+- **Add note**: INSERT into DB, use returned UUID as note id
+- **Delete note**: DELETE from DB immediately
+- **Move/resize (on release)**: UPDATE position/dimensions immediately
+- **Content edit**: debounced UPDATE (~500ms)
+- **Color change**: UPDATE immediately
+- Local state updates remain instant for responsiveness; DB writes happen in background
+
+### 6. Sign Out
+- Add logout button to `CanvasToolbar.tsx`
+- Calls `supabase.auth.signOut()`, redirects to auth page
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `src/pages/Auth.tsx` | New — landing + login/signup |
+| `src/App.tsx` | Auth guard, session state |
+| `src/hooks/useCanvasState.ts` | DB read/write, accepts userId |
+| `src/components/canvas/CanvasToolbar.tsx` | Add sign-out button |
+| `src/components/canvas/InfiniteCanvas.tsx` | Pass userId to hook |
+| Migration SQL | Create `notes` table + RLS |
 
