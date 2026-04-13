@@ -44,6 +44,7 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
   const dragStart = useRef({ x: 0, y: 0, noteX: 0, noteY: 0 });
   const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0 });
   const didDrag = useRef(false);
+  const lastMouse = useRef({ x: 0, y: 0 });
 
   // --- Editor ready callback ---
   const handleEditorReady = useCallback((editor: Editor | null) => {
@@ -159,18 +160,14 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
         setIsEditing(false);
       }
 
+      lastMouse.current = { x: e.clientX, y: e.clientY };
       const moveX = (e.clientX - dragStart.current.x) / scale;
       const moveY = (e.clientY - dragStart.current.y) / scale;
       onMove(dragStart.current.noteX + moveX, dragStart.current.noteY + moveY);
     };
     const handleUp = () => {
       if (didDrag.current) {
-        // Snap to grid on release
         const snap = (v: number) => Math.round(v / SNAP_GRID) * SNAP_GRID;
-        const moveX = (dragStart.current.x - dragStart.current.x) === 0
-          ? undefined : undefined;
-        // Get current position from the note's last moved position
-        // We need to read the current unsnapped position and snap it
         const rawX = dragStart.current.noteX + (lastMouse.current.x - dragStart.current.x) / scale;
         const rawY = dragStart.current.noteY + (lastMouse.current.y - dragStart.current.y) / scale;
         onMove(snap(rawX), snap(rawY));
