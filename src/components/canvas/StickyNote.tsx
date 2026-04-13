@@ -85,7 +85,7 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
    * mousedown on the note container.
    * Priority: checkbox > contenteditable > controls > drag
    */
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
     const target = e.target as HTMLElement;
 
     // 1. Checkbox — let it through, block everything else
@@ -109,6 +109,7 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
 
     // 4. Everything else — start drag
     e.stopPropagation();
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
     onSelect();
     didDrag.current = false;
     dragStart.current = { x: e.clientX, y: e.clientY, noteX: note.x, noteY: note.y };
