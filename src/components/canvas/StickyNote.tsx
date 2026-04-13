@@ -218,7 +218,7 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
         width: note.width,
         height: note.height,
       }}
-      onMouseDown={handleMouseDown}
+      onPointerDown={handlePointerDown}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
     >
@@ -270,7 +270,8 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
       {/* Resize handle */}
       <div
         className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize opacity-0 hover:opacity-100 transition-opacity"
-        onMouseDown={handleResizeStart}
+        style={{ touchAction: 'none' }}
+        onPointerDown={handleResizeStart}
       >
         <svg viewBox="0 0 16 16" className="w-full h-full text-foreground/20">
           <path d="M14 14L8 14L14 8Z" fill="currentColor" />
