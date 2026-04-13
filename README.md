@@ -4,5 +4,5 @@ A minimal sticky notes app with an infinite canvas. Create, edit, move, resize, 
 
 Built with React, TypeScript, Tiptap, Tailwind CSS, and Lovable Cloud.
 
-![alt text](/notes_readme_1.png)
-![alt text](/notes_readme_2.png)
+![alt text](/public/notes_readme_1.png)
+![alt text](/public/notes_readme_2.png)
