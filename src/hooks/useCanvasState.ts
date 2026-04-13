@@ -42,7 +42,7 @@ export function useCanvasState() {
   }, []);
 
   const moveNote = useCallback((id: string, x: number, y: number) => {
-    setNotes(prev => prev.map(n => n.id === id ? { ...n, x: snapToGrid(x), y: snapToGrid(y) } : n));
+    setNotes(prev => prev.map(n => n.id === id ? { ...n, x, y } : n));
   }, []);
 
   const resizeNote = useCallback((id: string, width: number, height: number) => {

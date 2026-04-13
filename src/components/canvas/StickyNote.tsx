@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Note, NOTE_COLOR_MAP, NOTE_COLOR_RING_MAP, NOTE_COLORS, NoteColor } from '@/types/canvas';
+import { Note, NOTE_COLOR_MAP, NOTE_COLOR_RING_MAP, NOTE_COLORS, NoteColor, SNAP_GRID } from '@/types/canvas';
 import { Trash2 } from 'lucide-react';
 import { NoteEditor } from './NoteEditor';
 import { Editor } from '@tiptap/react';
@@ -44,6 +44,7 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
   const dragStart = useRef({ x: 0, y: 0, noteX: 0, noteY: 0 });
   const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0 });
   const didDrag = useRef(false);
+  const lastMouse = useRef({ x: 0, y: 0 });
 
   // --- Editor ready callback ---
   const handleEditorReady = useCallback((editor: Editor | null) => {
@@ -159,11 +160,20 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
         setIsEditing(false);
       }
 
+      lastMouse.current = { x: e.clientX, y: e.clientY };
       const moveX = (e.clientX - dragStart.current.x) / scale;
       const moveY = (e.clientY - dragStart.current.y) / scale;
       onMove(dragStart.current.noteX + moveX, dragStart.current.noteY + moveY);
     };
-    const handleUp = () => setIsDragging(false);
+    const handleUp = () => {
+      if (didDrag.current) {
+        const snap = (v: number) => Math.round(v / SNAP_GRID) * SNAP_GRID;
+        const rawX = dragStart.current.noteX + (lastMouse.current.x - dragStart.current.x) / scale;
+        const rawY = dragStart.current.noteY + (lastMouse.current.y - dragStart.current.y) / scale;
+        onMove(snap(rawX), snap(rawY));
+      }
+      setIsDragging(false);
+    };
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleUp);
     return () => {
