@@ -66,6 +66,11 @@ const Auth: React.FC = () => {
       {/* Auth Section */}
       <div className="flex-1 flex items-center justify-center px-8 py-12 lg:bg-muted/30">
         <div className="w-full max-w-sm space-y-6">
+          <p className="text-sm text-muted-foreground">
+            {isSignUp
+              ? 'Start organizing your ideas on an infinite canvas.'
+              : 'Sign in to access your board.'}
+          </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
