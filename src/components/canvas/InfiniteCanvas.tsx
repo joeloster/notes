@@ -22,6 +22,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
   const [activeEditor, setActiveEditor] = useState<Editor | null>(null);
   const [isNoteEditing, setIsNoteEditing] = useState(false);
   const [highlightedNoteId, setHighlightedNoteId] = useState<string | null>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Pinch-to-zoom state
   const activePointers = useRef<Map<number, { x: number; y: number }>>(new Map());
