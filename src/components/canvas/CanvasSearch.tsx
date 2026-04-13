@@ -81,14 +81,22 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
     return getMatchingWords(notes, query, 3);
   }, [query, notes]);
 
+  // Track whether the last query change came from a suggestion click
+  const fromSuggestionRef = useRef(false);
+
   // Reset index when results change
   useEffect(() => {
     setCurrentIndex(0);
-    setHasNavigated(false);
-    if (results.length > 0) {
-      onHighlightNote(results[0]);
+    if (fromSuggestionRef.current) {
+      // Suggestion already set hasNavigated and highlighted — don't reset
+      fromSuggestionRef.current = false;
     } else {
-      onHighlightNote(null);
+      setHasNavigated(false);
+      if (results.length > 0) {
+        onHighlightNote(results[0]);
+      } else {
+        onHighlightNote(null);
+      }
     }
   }, [results, onHighlightNote]);
 
@@ -148,6 +156,7 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
   }, [isOpen, close]);
 
   const handleSelectSuggestion = useCallback((word: string) => {
+    fromSuggestionRef.current = true;
     setQuery(word);
     setDebouncedQuery(word);
     setCurrentIndex(0);
