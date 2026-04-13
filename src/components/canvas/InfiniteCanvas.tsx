@@ -198,16 +198,21 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
       onPointerCancel={handlePointerUp}
       onDoubleClick={handleDoubleClick}
     >
-      {/* Floating text toolbar */}
-      <NoteEditorToolbar editor={activeEditor} visible={isNoteEditing} />
+      {/* Floating text toolbar — hidden when search is open */}
+      {!isSearchOpen && (
+        <NoteEditorToolbar editor={activeEditor} visible={isNoteEditing} />
+      )}
 
-      {/* Search */}
-      <CanvasSearch
-        notes={notes}
-        onNavigateToNote={handleNavigateToNote}
-        highlightedNoteId={highlightedNoteId}
-        onHighlightNote={setHighlightedNoteId}
-      />
+      {/* Search — hidden when note toolbar is active */}
+      {!isNoteEditing && (
+        <CanvasSearch
+          notes={notes}
+          onNavigateToNote={handleNavigateToNote}
+          highlightedNoteId={highlightedNoteId}
+          onHighlightNote={setHighlightedNoteId}
+          onOpenChange={setIsSearchOpen}
+        />
+      )}
 
       {/* Grid background */}
       <div
