@@ -130,8 +130,9 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
   const open = useCallback(() => {
     setIsOpen(true);
     setShowSuggestions(false);
+    onOpenChange?.(true);
     requestAnimationFrame(() => inputRef.current?.focus());
-  }, []);
+  }, [onOpenChange]);
 
   const close = useCallback(() => {
     setIsOpen(false);
@@ -141,7 +142,8 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
     setHasNavigated(false);
     setShowSuggestions(false);
     onHighlightNote(null);
-  }, [onHighlightNote]);
+    onOpenChange?.(false);
+  }, [onHighlightNote, onOpenChange]);
 
   // Click outside
   useEffect(() => {
