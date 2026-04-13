@@ -251,7 +251,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
       </div>
 
       {/* Hint text */}
-      {notes.length === 0 && (
+      {loaded && notes.length === 0 && (
         <div className="fixed inset-0 flex items-center justify-center pointer-events-none">
           <div className="text-center text-muted-foreground">
             <p className="text-lg font-medium">Double-click anywhere to create a note</p>
