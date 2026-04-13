@@ -8,7 +8,11 @@ import { NoteEditorToolbar } from './NoteEditorToolbar';
 import { GRID_SIZE } from '@/types/canvas';
 import { Editor } from '@tiptap/react';
 
-export const InfiniteCanvas: React.FC = () => {
+interface InfiniteCanvasProps {
+  userId: string;
+}
+
+export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const isPanning = useRef(false);
   const panStart = useRef({ x: 0, y: 0 });
@@ -25,11 +29,11 @@ export const InfiniteCanvas: React.FC = () => {
   const lastPinchCenter = useRef<{ x: number; y: number } | null>(null);
 
   const {
-    notes, view, selectedNoteId, activeColor,
+    notes, view, selectedNoteId, activeColor, loaded,
     setActiveColor, setSelectedNoteId, setView,
-    addNote, updateNote, deleteNote, moveNote, resizeNote,
+    addNote, updateNote, deleteNote, moveNote, persistPosition, resizeNote, persistSize,
     zoom, resetView,
-  } = useCanvasState();
+  } = useCanvasState(userId);
 
   const handleNavigateToNote = useCallback((noteId: string) => {
     const note = notes.find(n => n.id === noteId);
@@ -236,7 +240,9 @@ export const InfiniteCanvas: React.FC = () => {
             isHighlighted={highlightedNoteId === note.id}
             onSelect={() => setSelectedNoteId(note.id)}
             onMove={(x, y) => moveNote(note.id, x, y)}
+            onMoveEnd={(x, y) => persistPosition(note.id, x, y)}
             onResize={(w, h) => resizeNote(note.id, w, h)}
+            onResizeEnd={(w, h) => persistSize(note.id, w, h)}
             onUpdate={(updates) => updateNote(note.id, updates)}
             onDelete={() => deleteNote(note.id)}
             onEditingChange={handleEditingChange}
@@ -245,7 +251,7 @@ export const InfiniteCanvas: React.FC = () => {
       </div>
 
       {/* Hint text */}
-      {notes.length === 0 && (
+      {loaded && notes.length === 0 && (
         <div className="fixed inset-0 flex items-center justify-center pointer-events-none">
           <div className="text-center text-muted-foreground">
             <p className="text-lg font-medium">Double-click anywhere to create a note</p>

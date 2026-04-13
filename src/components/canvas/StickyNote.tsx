@@ -11,7 +11,9 @@ interface StickyNoteProps {
   isHighlighted?: boolean;
   onSelect: () => void;
   onMove: (x: number, y: number) => void;
+  onMoveEnd?: (x: number, y: number) => void;
   onResize: (w: number, h: number) => void;
+  onResizeEnd?: (w: number, h: number) => void;
   onUpdate: (updates: Partial<Note>) => void;
   onDelete: () => void;
   onEditingChange: (editing: boolean, editor: Editor | null) => void;
@@ -32,7 +34,7 @@ const isEditable = (el: HTMLElement) =>
   el.closest('[contenteditable="true"]') !== null;
 
 export const StickyNote: React.FC<StickyNoteProps> = ({
-  note, scale, isSelected, isHighlighted, onSelect, onMove, onResize, onUpdate, onDelete, onEditingChange,
+  note, scale, isSelected, isHighlighted, onSelect, onMove, onMoveEnd, onResize, onResizeEnd, onUpdate, onDelete, onEditingChange,
 }) => {
   // --- Single source of truth ---
   const [isEditing, setIsEditing] = useState(false);
@@ -171,7 +173,10 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
         const snap = (v: number) => Math.round(v / SNAP_GRID) * SNAP_GRID;
         const rawX = dragStart.current.noteX + (lastMouse.current.x - dragStart.current.x) / scale;
         const rawY = dragStart.current.noteY + (lastMouse.current.y - dragStart.current.y) / scale;
-        onMove(snap(rawX), snap(rawY));
+        const finalX = snap(rawX);
+        const finalY = snap(rawY);
+        onMove(finalX, finalY);
+        onMoveEnd?.(finalX, finalY);
       }
       setIsDragging(false);
     };
@@ -194,11 +199,17 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
   useEffect(() => {
     if (!isResizing) return;
     const handleMove = (e: PointerEvent) => {
+      lastMouse.current = { x: e.clientX, y: e.clientY };
       const dx = (e.clientX - resizeStart.current.x) / scale;
       const dy = (e.clientY - resizeStart.current.y) / scale;
       onResize(resizeStart.current.w + dx, resizeStart.current.h + dy);
     };
-    const handleUp = () => setIsResizing(false);
+    const handleUp = () => {
+      const finalW = Math.max(140, Math.round((resizeStart.current.w + (lastMouse.current.x - resizeStart.current.x) / scale) / SNAP_GRID) * SNAP_GRID);
+      const finalH = Math.max(100, Math.round((resizeStart.current.h + (lastMouse.current.y - resizeStart.current.y) / scale) / SNAP_GRID) * SNAP_GRID);
+      onResizeEnd?.(finalW, finalH);
+      setIsResizing(false);
+    };
     window.addEventListener('pointermove', handleMove);
     window.addEventListener('pointerup', handleUp);
     return () => {
