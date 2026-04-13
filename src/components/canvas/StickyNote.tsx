@@ -199,6 +199,7 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
   useEffect(() => {
     if (!isResizing) return;
     const handleMove = (e: PointerEvent) => {
+      lastMouse.current = { x: e.clientX, y: e.clientY };
       const dx = (e.clientX - resizeStart.current.x) / scale;
       const dy = (e.clientY - resizeStart.current.y) / scale;
       onResize(resizeStart.current.w + dx, resizeStart.current.h + dy);
