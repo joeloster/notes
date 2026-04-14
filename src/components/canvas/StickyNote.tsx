@@ -195,25 +195,43 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
   }, [isDragging, scale, onMove, isEditing]);
 
   // --- Resize ---
-  const handleResizeStart = useCallback((e: React.PointerEvent) => {
+  const handleResizeStart = useCallback((corner: 'se' | 'sw' | 'ne' | 'nw') => (e: React.PointerEvent) => {
     e.stopPropagation();
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    resizeCorner.current = corner;
     setIsResizing(true);
-    resizeStart.current = { x: e.clientX, y: e.clientY, w: note.width, h: note.height };
-  }, [note.width, note.height]);
+    resizeStart.current = { x: e.clientX, y: e.clientY, w: note.width, h: note.height, noteX: note.x, noteY: note.y };
+  }, [note.width, note.height, note.x, note.y]);
 
   useEffect(() => {
     if (!isResizing) return;
+    const corner = resizeCorner.current;
+    const sX = corner === 'se' || corner === 'ne' ? 1 : -1;
+    const sY = corner === 'se' || corner === 'sw' ? 1 : -1;
+
     const handleMove = (e: PointerEvent) => {
       lastMouse.current = { x: e.clientX, y: e.clientY };
       const dx = (e.clientX - resizeStart.current.x) / scale;
       const dy = (e.clientY - resizeStart.current.y) / scale;
-      onResize(resizeStart.current.w + dx, resizeStart.current.h + dy);
+      const newW = Math.max(140, resizeStart.current.w + dx * sX);
+      const newH = Math.max(100, resizeStart.current.h + dy * sY);
+      onResize(newW, newH);
+      // Move position for top/left corners
+      const movedX = sX === -1 ? resizeStart.current.noteX + (resizeStart.current.w - newW) : resizeStart.current.noteX;
+      const movedY = sY === -1 ? resizeStart.current.noteY + (resizeStart.current.h - newH) : resizeStart.current.noteY;
+      onMove(movedX, movedY);
     };
     const handleUp = () => {
-      const finalW = Math.max(140, snapToGrid(resizeStart.current.w + (lastMouse.current.x - resizeStart.current.x) / scale));
-      const finalH = Math.max(100, snapToGrid(resizeStart.current.h + (lastMouse.current.y - resizeStart.current.y) / scale));
+      const dx = (lastMouse.current.x - resizeStart.current.x) / scale;
+      const dy = (lastMouse.current.y - resizeStart.current.y) / scale;
+      const finalW = Math.max(140, snapToGrid(resizeStart.current.w + dx * sX));
+      const finalH = Math.max(100, snapToGrid(resizeStart.current.h + dy * sY));
+      const finalX = sX === -1 ? snapToGrid(resizeStart.current.noteX + (resizeStart.current.w - finalW)) : resizeStart.current.noteX;
+      const finalY = sY === -1 ? snapToGrid(resizeStart.current.noteY + (resizeStart.current.h - finalH)) : resizeStart.current.noteY;
+      onResize(finalW, finalH);
       onResizeEnd?.(finalW, finalH);
+      onMove(finalX, finalY);
+      onMoveEnd?.(finalX, finalY);
       setIsResizing(false);
     };
     window.addEventListener('pointermove', handleMove);
@@ -222,7 +240,7 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
       window.removeEventListener('pointermove', handleMove);
       window.removeEventListener('pointerup', handleUp);
     };
-  }, [isResizing, scale, onResize]);
+  }, [isResizing, scale, onResize, onMove, onMoveEnd]);
 
   return (
     <div
