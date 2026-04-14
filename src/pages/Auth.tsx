@@ -201,12 +201,6 @@ const Auth: React.FC = () => {
           <p className="text-[10px] text-foreground/60">Meeting @ 3pm 📅</p>
         </DecoNote>
 
-        {/* Bottom-center: tiny green, empty */}
-        <DecoNote
-          color="green"
-          className="sm:hidden"
-          style={{ bottom: '22%', left: '35%', width: 85, height: 55, transform: 'rotate(1deg)' }}
-        />
 
 
         {/* ── Center hero note (blue, largest) ── */}
