@@ -182,14 +182,32 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
       return;
     }
 
-    // Single pointer → pan
+    // Single pointer → pan or group drag
     if (activePointers.current.size === 1) {
+      // Check if clicking inside group selection bounding box
+      if (groupSelectedIds.size > 0) {
+        const canvasPos = screenToCanvas(e.clientX, e.clientY);
+        const selectedNotes = notes.filter(n => groupSelectedIds.has(n.id));
+        const minX = Math.min(...selectedNotes.map(n => n.x));
+        const minY = Math.min(...selectedNotes.map(n => n.y));
+        const maxX = Math.max(...selectedNotes.map(n => n.x + n.width));
+        const maxY = Math.max(...selectedNotes.map(n => n.y + n.height));
+
+        if (canvasPos.x >= minX && canvasPos.x <= maxX && canvasPos.y >= minY && canvasPos.y <= maxY) {
+          // Start group drag
+          handleGroupDragStart('', e.clientX, e.clientY);
+          return;
+        } else {
+          // Clicked outside — clear selection
+          setGroupSelectedIds(new Set());
+        }
+      }
+
       isPanning.current = true;
       hasPanned.current = false;
       mouseDownPos.current = { x: e.clientX, y: e.clientY };
       panStart.current = { x: e.clientX - view.x, y: e.clientY - view.y };
       setSelectedNoteId(null);
-      setGroupSelectedIds(new Set());
     }
 
     // Two pointers → init pinch
@@ -264,6 +282,8 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
       isSelecting.current = false;
       selectionStart.current = null;
       setSelectionRect(null);
+      // One-shot: revert to pan mode, keep selection
+      setInteractionMode('pan');
       return;
     }
 
@@ -357,19 +377,6 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
           transformOrigin: '0 0',
         }}
       >
-        {/* Selection rectangle */}
-        {selectionRect && (
-          <div
-            className="absolute border-2 border-primary/60 bg-primary/10 rounded pointer-events-none"
-            style={{
-              left: selectionRect.x,
-              top: selectionRect.y,
-              width: selectionRect.w,
-              height: selectionRect.h,
-            }}
-          />
-        )}
-
         {notes.map(note => (
           <StickyNote
             key={note.id}
@@ -389,6 +396,20 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
             onEditingChange={handleEditingChange}
           />
         ))}
+
+        {/* Selection rectangle — on top of notes */}
+        {selectionRect && (
+          <div
+            className="absolute border-2 border-primary/60 bg-primary/10 rounded pointer-events-none"
+            style={{
+              left: selectionRect.x,
+              top: selectionRect.y,
+              width: selectionRect.w,
+              height: selectionRect.h,
+              zIndex: 9999,
+            }}
+          />
+        )}
       </div>
 
       {/* Hint text */}
