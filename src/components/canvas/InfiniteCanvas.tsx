@@ -172,8 +172,8 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
         const positions: { id: string; x: number; y: number }[] = [];
 
         for (const [id, pos] of origPositions) {
-          const fx = snap(pos.x + dx);
-          const fy = snap(pos.y + dy);
+          const fx = snapToGrid(pos.x + dx);
+          const fy = snapToGrid(pos.y + dy);
           moveNote(id, fx, fy);
           positions.push({ id, x: fx, y: fy });
         }

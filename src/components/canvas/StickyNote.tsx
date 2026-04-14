@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Note, NOTE_COLOR_MAP, NOTE_COLOR_RING_MAP, NOTE_COLORS, NoteColor } from '@/types/canvas';
+import { Note, NOTE_COLOR_MAP, NOTE_COLOR_RING_MAP, NOTE_COLORS } from '@/types/canvas';
 import { snapToGrid } from '@/lib/snapGrid';
 import { Trash2 } from 'lucide-react';
 import { NoteEditor } from './NoteEditor';
@@ -210,8 +210,8 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
       onResize(resizeStart.current.w + dx, resizeStart.current.h + dy);
     };
     const handleUp = () => {
-      const finalW = Math.max(140, Math.round((resizeStart.current.w + (lastMouse.current.x - resizeStart.current.x) / scale) / SNAP_GRID) * SNAP_GRID);
-      const finalH = Math.max(100, Math.round((resizeStart.current.h + (lastMouse.current.y - resizeStart.current.y) / scale) / SNAP_GRID) * SNAP_GRID);
+      const finalW = Math.max(140, snapToGrid(resizeStart.current.w + (lastMouse.current.x - resizeStart.current.x) / scale));
+      const finalH = Math.max(100, snapToGrid(resizeStart.current.h + (lastMouse.current.y - resizeStart.current.y) / scale));
       onResizeEnd?.(finalW, finalH);
       setIsResizing(false);
     };
