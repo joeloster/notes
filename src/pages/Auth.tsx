@@ -97,7 +97,7 @@ const Auth: React.FC = () => {
         className="relative min-h-screen bg-canvas-bg flex items-center justify-center overflow-hidden"
         style={gridStyle}
       >
-        {/* ── Decorative notes ── */}
+        {/* ── Decorative notes (sm+) ── */}
 
         {/* Top-left: yellow */}
         <DecoNote
@@ -164,6 +164,65 @@ const Auth: React.FC = () => {
           <p className="font-semibold mb-1">Goals</p>
           <p className="text-xs text-foreground/60">Read 2 books this month 📚</p>
         </DecoNote>
+
+        {/* ── Mobile-only decorative notes ── */}
+
+        {/* Top-left: small yellow, slightly overlapping */}
+        <DecoNote
+          color="yellow"
+          className="sm:hidden"
+          style={{ top: '6%', left: '4%', width: 120, height: 80, transform: 'rotate(-5deg)' }}
+        >
+          <p className="text-[10px] text-foreground/60">Buy milk 🥛</p>
+        </DecoNote>
+
+        {/* Top-right: pink, tilted */}
+        <DecoNote
+          color="pink"
+          className="sm:hidden"
+          style={{ top: '4%', right: '8%', width: 110, height: 70, transform: 'rotate(4deg)' }}
+        >
+          <p className="text-[10px] text-foreground/60">Ideas 💡</p>
+        </DecoNote>
+
+        {/* Left-mid: green, overlapping hero slightly */}
+        <DecoNote
+          color="green"
+          className="sm:hidden"
+          style={{ top: '32%', left: '-2%', width: 105, height: 75, transform: 'rotate(2deg)', zIndex: 5 }}
+        >
+          <p className="text-[10px] text-foreground/60">Gym @ 6pm 💪</p>
+        </DecoNote>
+
+        {/* Right-mid: purple, peeking behind hero */}
+        <DecoNote
+          color="purple"
+          className="sm:hidden"
+          style={{ top: '38%', right: '-3%', width: 115, height: 80, transform: 'rotate(-3deg)', zIndex: 5 }}
+        />
+
+        {/* Bottom-left: empty yellow */}
+        <DecoNote
+          color="yellow"
+          className="sm:hidden"
+          style={{ bottom: '14%', left: '6%', width: 100, height: 65, transform: 'rotate(3deg)' }}
+        />
+
+        {/* Bottom-right: blue with text */}
+        <DecoNote
+          color="blue"
+          className="sm:hidden"
+          style={{ bottom: '10%', right: '5%', width: 115, height: 75, transform: 'rotate(-2deg)' }}
+        >
+          <p className="text-[10px] text-foreground/60">Call Mom ❤️</p>
+        </DecoNote>
+
+        {/* Bottom-center: tiny green, empty */}
+        <DecoNote
+          color="green"
+          className="sm:hidden"
+          style={{ bottom: '22%', left: '35%', width: 85, height: 55, transform: 'rotate(1deg)' }}
+        />
 
         {/* ── Center hero note (blue, largest) ── */}
         <DecoNote
