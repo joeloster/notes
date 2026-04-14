@@ -99,8 +99,18 @@ export function useCanvasState(userId: string) {
     setNotes(prev => prev.map(n => n.id === id ? { ...n, x, y } : n));
   }, []);
 
+  const moveNotes = useCallback((ids: Set<string>, dx: number, dy: number) => {
+    setNotes(prev => prev.map(n => ids.has(n.id) ? { ...n, x: n.x + dx, y: n.y + dy } : n));
+  }, []);
+
   const persistPosition = useCallback(async (id: string, x: number, y: number) => {
     await supabase.from('notes').update({ x, y }).eq('id', id);
+  }, []);
+
+  const persistPositions = useCallback(async (notePositions: { id: string; x: number; y: number }[]) => {
+    await Promise.all(notePositions.map(({ id, x, y }) =>
+      supabase.from('notes').update({ x, y }).eq('id', id)
+    ));
   }, []);
 
   const resizeNote = useCallback((id: string, width: number, height: number) => {
@@ -149,7 +159,9 @@ export function useCanvasState(userId: string) {
     updateNote,
     deleteNote,
     moveNote,
+    moveNotes,
     persistPosition,
+    persistPositions,
     resizeNote,
     persistSize,
     zoom,

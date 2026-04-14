@@ -9,9 +9,11 @@ interface StickyNoteProps {
   scale: number;
   isSelected: boolean;
   isHighlighted?: boolean;
+  isGroupSelected?: boolean;
   onSelect: () => void;
   onMove: (x: number, y: number) => void;
   onMoveEnd?: (x: number, y: number) => void;
+  onGroupDragStart?: (noteId: string, startX: number, startY: number) => void;
   onResize: (w: number, h: number) => void;
   onResizeEnd?: (w: number, h: number) => void;
   onUpdate: (updates: Partial<Note>) => void;
@@ -34,7 +36,7 @@ const isEditable = (el: HTMLElement) =>
   el.closest('[contenteditable="true"]') !== null;
 
 export const StickyNote: React.FC<StickyNoteProps> = ({
-  note, scale, isSelected, isHighlighted, onSelect, onMove, onMoveEnd, onResize, onResizeEnd, onUpdate, onDelete, onEditingChange,
+  note, scale, isSelected, isHighlighted, isGroupSelected, onSelect, onMove, onMoveEnd, onGroupDragStart, onResize, onResizeEnd, onUpdate, onDelete, onEditingChange,
 }) => {
   // --- Single source of truth ---
   const [isEditing, setIsEditing] = useState(false);
@@ -114,9 +116,16 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
     onSelect();
     didDrag.current = false;
+
+    // If this note is part of a group selection, delegate drag to the group handler
+    if (isGroupSelected && onGroupDragStart) {
+      onGroupDragStart(note.id, e.clientX, e.clientY);
+      return;
+    }
+
     dragStart.current = { x: e.clientX, y: e.clientY, noteX: note.x, noteY: note.y };
     setIsDragging(true);
-  }, [note.x, note.y, onSelect]);
+  }, [note.x, note.y, onSelect, isGroupSelected, onGroupDragStart, note.id]);
 
   /**
    * click on the note — enters edit mode if it was a clean click
@@ -222,7 +231,7 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
     <div
       className={`absolute select-none rounded-xl ${isDragging ? '' : 'transition-all duration-200'} ${NOTE_COLOR_MAP[note.color]} ${
         isSelected ? `ring-2 ${NOTE_COLOR_RING_MAP[note.color]} shadow-lg` : 'shadow-md'
-      } ${isHighlighted && !isSelected ? 'ring-2 ring-primary/60 shadow-lg shadow-primary/20' : ''} ${isDragging && didDrag.current ? 'cursor-grabbing z-50 shadow-xl' : 'cursor-grab z-10'}`}
+      } ${isHighlighted && !isSelected ? 'ring-2 ring-primary/60 shadow-lg shadow-primary/20' : ''} ${isGroupSelected && !isSelected ? 'ring-2 ring-primary/40 shadow-md' : ''} ${isDragging && didDrag.current ? 'cursor-grabbing z-50 shadow-xl' : 'cursor-grab z-10'}`}
       style={{
         left: note.x,
         top: note.y,
