@@ -234,7 +234,7 @@ const Auth: React.FC = () => {
         <button
           type="button"
           onClick={() => document.getElementById('auth-section')?.scrollIntoView({ behavior: 'smooth' })}
-          className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 text-muted-foreground/60 animate-bounce hover:text-muted-foreground transition-colors"
+          className="absolute bottom-6 inset-x-0 mx-auto w-fit flex flex-col items-center gap-1 text-muted-foreground/60 animate-bounce hover:text-muted-foreground transition-colors"
         >
           <span className="text-xs">Sign in</span>
           <ChevronDown size={20} />
