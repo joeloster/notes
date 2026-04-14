@@ -102,7 +102,7 @@ const Auth: React.FC = () => {
           className="pointer-events-none absolute inset-0 z-[1]"
           style={{
             background: `
-              radial-gradient(ellipse 80% 70% at 50% 50%, transparent 40%, hsl(var(--background)) 100%)
+              radial-gradient(ellipse 90% 80% at 50% 50%, transparent 55%, hsl(var(--background)) 100%)
             `,
           }}
         />
