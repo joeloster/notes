@@ -142,9 +142,6 @@ export function useCanvasState(userId: string) {
     setView({ x: 0, y: 0, scale: 1 });
   }, []);
 
-  const pan = useCallback((dx: number, dy: number) => {
-    setView(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
-  }, []);
 
   return {
     notes,
@@ -166,6 +163,6 @@ export function useCanvasState(userId: string) {
     persistSize,
     zoom,
     resetView,
-    pan,
+    
   };
 }
