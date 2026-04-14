@@ -242,7 +242,7 @@ const Auth: React.FC = () => {
       </section>
 
       {/* ═══════ AUTH SECTION ═══════ */}
-      <section className="min-h-screen bg-background flex items-center justify-center px-6 py-12">
+      <section id="auth-section" className="min-h-screen bg-background flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm space-y-6">
           <div className="space-y-1">
             <h2 className="text-2xl font-bold text-foreground">
