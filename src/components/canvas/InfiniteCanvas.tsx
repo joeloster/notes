@@ -217,7 +217,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
       lastPinchDist.current = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
       lastPinchCenter.current = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
     }
-  }, [view.x, view.y, setSelectedNoteId, interactionMode, screenToCanvas]);
+  }, [view.x, view.y, setSelectedNoteId, interactionMode, screenToCanvas, groupSelectedIds, notes, handleGroupDragStart]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!activePointers.current.has(e.pointerId)) return;
