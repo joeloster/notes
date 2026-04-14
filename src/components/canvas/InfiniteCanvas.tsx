@@ -1,11 +1,11 @@
 import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { useCanvasState } from '@/hooks/useCanvasState';
 import { StickyNote } from './StickyNote';
-import { CanvasToolbar } from './CanvasToolbar';
+import { CanvasToolbar, InteractionMode } from './CanvasToolbar';
 import { CanvasSearch } from './CanvasSearch';
 import { MiniMap } from './MiniMap';
 import { NoteEditorToolbar } from './NoteEditorToolbar';
-import { GRID_SIZE } from '@/types/canvas';
+import { GRID_SIZE, SNAP_GRID } from '@/types/canvas';
 import { Editor } from '@tiptap/react';
 
 interface InfiniteCanvasProps {
@@ -24,6 +24,17 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
   const [highlightedNoteId, setHighlightedNoteId] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
+  // Multi-select state
+  const [interactionMode, setInteractionMode] = useState<InteractionMode>('pan');
+  const [groupSelectedIds, setGroupSelectedIds] = useState<Set<string>>(new Set());
+  const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const selectionStart = useRef<{ canvasX: number; canvasY: number } | null>(null);
+  const isSelecting = useRef(false);
+
+  // Group drag state
+  const groupDragRef = useRef<{ startX: number; startY: number; origPositions: Map<string, { x: number; y: number }> } | null>(null);
+  const isGroupDragging = useRef(false);
+
   // Pinch-to-zoom state
   const activePointers = useRef<Map<number, { x: number; y: number }>>(new Map());
   const lastPinchDist = useRef<number | null>(null);
@@ -32,7 +43,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
   const {
     notes, view, selectedNoteId, activeColor, loaded,
     setActiveColor, setSelectedNoteId, setView,
-    addNote, updateNote, deleteNote, moveNote, persistPosition, resizeNote, persistSize,
+    addNote, updateNote, deleteNote, moveNote, moveNotes, persistPosition, persistPositions, resizeNote, persistSize,
     zoom, resetView,
   } = useCanvasState(userId);
 
@@ -87,7 +98,10 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
           deleteNote(selectedNoteId);
         }
       }
-      if (e.key === 'Escape') setSelectedNoteId(null);
+      if (e.key === 'Escape') {
+        setSelectedNoteId(null);
+        setGroupSelectedIds(new Set());
+      }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
@@ -98,13 +112,75 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
     y: (sy - view.y) / view.scale,
   }), [view]);
 
-  // --- Pointer event handlers for pan + pinch ---
+  // --- Group drag handlers ---
+  const handleGroupDragStart = useCallback((noteId: string, startX: number, startY: number) => {
+    const origPositions = new Map<string, { x: number; y: number }>();
+    for (const n of notes) {
+      if (groupSelectedIds.has(n.id)) {
+        origPositions.set(n.id, { x: n.x, y: n.y });
+      }
+    }
+    groupDragRef.current = { startX, startY, origPositions };
+    isGroupDragging.current = true;
+  }, [notes, groupSelectedIds]);
+
+  useEffect(() => {
+    if (!isGroupDragging.current) return;
+    const handleMove = (e: PointerEvent) => {
+      if (!groupDragRef.current) return;
+      const { startX, startY, origPositions } = groupDragRef.current;
+      const dx = (e.clientX - startX) / view.scale;
+      const dy = (e.clientY - startY) / view.scale;
+      for (const [id, pos] of origPositions) {
+        moveNote(id, pos.x + dx, pos.y + dy);
+      }
+    };
+    const handleUp = (e: PointerEvent) => {
+      if (!groupDragRef.current) return;
+      const { startX, startY, origPositions } = groupDragRef.current;
+      const dx = (e.clientX - startX) / view.scale;
+      const dy = (e.clientY - startY) / view.scale;
+      const snap = (v: number) => Math.round(v / SNAP_GRID) * SNAP_GRID;
+      const positions: { id: string; x: number; y: number }[] = [];
+      for (const [id, pos] of origPositions) {
+        const fx = snap(pos.x + dx);
+        const fy = snap(pos.y + dy);
+        moveNote(id, fx, fy);
+        positions.push({ id, x: fx, y: fy });
+      }
+      persistPositions(positions);
+      isGroupDragging.current = false;
+      groupDragRef.current = null;
+    };
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+    return () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+    };
+  }, [view.scale, moveNote, persistPositions]);
+
+  // Reattach group drag listener when flag changes
+  useEffect(() => {
+    // This effect exists to re-subscribe when isGroupDragging changes
+  }, []);
+
+  // --- Pointer event handlers for pan + pinch + select ---
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     const target = e.target as HTMLElement;
     if (target !== canvasRef.current && !target.classList.contains('canvas-grid') && !target.classList.contains('canvas-transform')) return;
 
     activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+
+    if (interactionMode === 'select') {
+      // Start selection rectangle
+      const canvasPos = screenToCanvas(e.clientX, e.clientY);
+      selectionStart.current = { canvasX: canvasPos.x, canvasY: canvasPos.y };
+      isSelecting.current = true;
+      setSelectionRect({ x: canvasPos.x, y: canvasPos.y, w: 0, h: 0 });
+      return;
+    }
 
     // Single pointer → pan
     if (activePointers.current.size === 1) {
@@ -113,6 +189,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
       mouseDownPos.current = { x: e.clientX, y: e.clientY };
       panStart.current = { x: e.clientX - view.x, y: e.clientY - view.y };
       setSelectedNoteId(null);
+      setGroupSelectedIds(new Set());
     }
 
     // Two pointers → init pinch
@@ -122,11 +199,40 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
       lastPinchDist.current = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
       lastPinchCenter.current = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
     }
-  }, [view.x, view.y, setSelectedNoteId]);
+  }, [view.x, view.y, setSelectedNoteId, interactionMode, screenToCanvas]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!activePointers.current.has(e.pointerId)) return;
     activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    // Selection rectangle drawing
+    if (isSelecting.current && selectionStart.current) {
+      const canvasPos = screenToCanvas(e.clientX, e.clientY);
+      const sx = selectionStart.current.canvasX;
+      const sy = selectionStart.current.canvasY;
+      const rect = {
+        x: Math.min(sx, canvasPos.x),
+        y: Math.min(sy, canvasPos.y),
+        w: Math.abs(canvasPos.x - sx),
+        h: Math.abs(canvasPos.y - sy),
+      };
+      setSelectionRect(rect);
+
+      // Compute which notes intersect
+      const selected = new Set<string>();
+      for (const n of notes) {
+        if (
+          n.x + n.width > rect.x &&
+          n.x < rect.x + rect.w &&
+          n.y + n.height > rect.y &&
+          n.y < rect.y + rect.h
+        ) {
+          selected.add(n.id);
+        }
+      }
+      setGroupSelectedIds(selected);
+      return;
+    }
 
     // Pinch-to-zoom (two pointers)
     if (activePointers.current.size === 2 && lastPinchDist.current !== null) {
@@ -149,10 +255,18 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
       x: e.clientX - panStart.current.x,
       y: e.clientY - panStart.current.y,
     }));
-  }, [setView, zoom]);
+  }, [setView, zoom, screenToCanvas, notes]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     activePointers.current.delete(e.pointerId);
+
+    if (isSelecting.current) {
+      isSelecting.current = false;
+      selectionStart.current = null;
+      setSelectionRect(null);
+      return;
+    }
+
     if (activePointers.current.size < 2) {
       lastPinchDist.current = null;
       lastPinchCenter.current = null;
@@ -176,6 +290,12 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
     addNote(cx, cy);
   }, [canvasSize, view, addNote]);
 
+  const handleToggleMode = useCallback(() => {
+    setInteractionMode(prev => prev === 'pan' ? 'select' : 'pan');
+    setGroupSelectedIds(new Set());
+    setSelectionRect(null);
+  }, []);
+
   const gridSize = GRID_SIZE * view.scale;
   const majorGridSize = gridSize * 5;
   const offsetX = view.x % gridSize;
@@ -188,7 +308,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
       ref={canvasRef}
       className="w-screen h-screen overflow-hidden bg-canvas-bg select-none"
       style={{
-        cursor: isPanning.current ? 'grabbing' : 'default',
+        cursor: interactionMode === 'select' ? 'crosshair' : (isPanning.current ? 'grabbing' : 'default'),
         touchAction: 'none',
       }}
       onPointerDown={handlePointerDown}
@@ -237,6 +357,19 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
           transformOrigin: '0 0',
         }}
       >
+        {/* Selection rectangle */}
+        {selectionRect && (
+          <div
+            className="absolute border-2 border-primary/60 bg-primary/10 rounded pointer-events-none"
+            style={{
+              left: selectionRect.x,
+              top: selectionRect.y,
+              width: selectionRect.w,
+              height: selectionRect.h,
+            }}
+          />
+        )}
+
         {notes.map(note => (
           <StickyNote
             key={note.id}
@@ -244,9 +377,11 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
             scale={view.scale}
             isSelected={selectedNoteId === note.id}
             isHighlighted={highlightedNoteId === note.id}
+            isGroupSelected={groupSelectedIds.has(note.id)}
             onSelect={() => setSelectedNoteId(note.id)}
             onMove={(x, y) => moveNote(note.id, x, y)}
             onMoveEnd={(x, y) => persistPosition(note.id, x, y)}
+            onGroupDragStart={groupSelectedIds.size > 0 ? handleGroupDragStart : undefined}
             onResize={(w, h) => resizeNote(note.id, w, h)}
             onResizeEnd={(w, h) => persistSize(note.id, w, h)}
             onUpdate={(updates) => updateNote(note.id, updates)}
@@ -269,11 +404,13 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
       <CanvasToolbar
         activeColor={activeColor}
         scale={view.scale}
+        interactionMode={interactionMode}
         onAddNote={handleAddNoteCenter}
         onSetColor={setActiveColor}
         onZoomIn={() => zoom(0.15)}
         onZoomOut={() => zoom(-0.15)}
         onResetView={resetView}
+        onToggleMode={handleToggleMode}
       />
 
       <MiniMap

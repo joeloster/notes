@@ -1,24 +1,30 @@
 import React from 'react';
-import { Plus, ZoomIn, ZoomOut, LogOut } from 'lucide-react';
+import { Plus, ZoomIn, ZoomOut, LogOut, Hand, MousePointer2 } from 'lucide-react';
 import { NoteColor, NOTE_COLORS } from '@/types/canvas';
 import { supabase } from '@/integrations/supabase/client';
+
+export type InteractionMode = 'pan' | 'select';
 
 interface CanvasToolbarProps {
   activeColor: NoteColor;
   scale: number;
+  interactionMode: InteractionMode;
   onAddNote: () => void;
   onSetColor: (color: NoteColor) => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onResetView: () => void;
+  onToggleMode: () => void;
 }
 
 export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
-  activeColor, scale, onAddNote, onSetColor, onZoomIn, onZoomOut, onResetView,
+  activeColor, scale, interactionMode, onAddNote, onSetColor, onZoomIn, onZoomOut, onResetView, onToggleMode,
 }) => {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
   };
+
+  const isSelectMode = interactionMode === 'select';
 
   return (
     <div className="fixed inset-x-0 bottom-6 z-50 flex justify-center px-4 pointer-events-none">
@@ -48,6 +54,19 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
             />
           ))}
         </div>
+
+        <div className="mx-0.5 h-8 w-px bg-border sm:mx-1" />
+
+        {/* Mode toggle */}
+        <button
+          onClick={onToggleMode}
+          className={`rounded-lg p-1.5 transition-colors sm:p-2 ${
+            isSelectMode ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
+          }`}
+          title={isSelectMode ? 'Select mode (click to switch to pan)' : 'Pan mode (click to switch to select)'}
+        >
+          {isSelectMode ? <MousePointer2 size={16} /> : <Hand size={16} />}
+        </button>
 
         <div className="mx-0.5 h-8 w-px bg-border sm:mx-1" />
 
