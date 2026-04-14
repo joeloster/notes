@@ -26,7 +26,7 @@ const DecoNote: React.FC<DecoNoteProps> = ({ color, className = '', style, child
 
   return (
     <div
-      className={`absolute rounded-xl shadow-md ${colorMap[color]} ${className}`}
+      className={`absolute z-[2] rounded-xl shadow-md ${colorMap[color]} ${className}`}
       style={style}
     >
       {/* Header bar */}
