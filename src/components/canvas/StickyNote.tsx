@@ -35,7 +35,8 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
 
   const editorRef = useRef<Editor | null>(null);
   const dragStart = useRef({ x: 0, y: 0, noteX: 0, noteY: 0 });
-  const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0 });
+  const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0, noteX: 0, noteY: 0 });
+  const resizeCorner = useRef<'se' | 'sw' | 'ne' | 'nw'>('se');
   const didDrag = useRef(false);
   const lastMouse = useRef({ x: 0, y: 0 });
 
