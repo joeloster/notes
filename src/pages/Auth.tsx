@@ -97,6 +97,15 @@ const Auth: React.FC = () => {
         className="relative min-h-screen bg-canvas-bg flex items-center justify-center overflow-hidden"
         style={gridStyle}
       >
+        {/* Vignette overlay: fades grid into white at all edges */}
+        <div
+          className="pointer-events-none absolute inset-0 z-[1]"
+          style={{
+            background: `
+              radial-gradient(ellipse 80% 70% at 50% 50%, transparent 40%, hsl(var(--background)) 100%)
+            `,
+          }}
+        />
         {/* ── Decorative notes (sm+) ── */}
 
         {/* Top-left: yellow */}
