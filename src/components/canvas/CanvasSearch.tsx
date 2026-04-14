@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Search, X, ChevronUp, ChevronDown } from 'lucide-react';
 import { Note } from '@/types/canvas';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface CanvasSearchProps {
   notes: Note[];
@@ -293,13 +294,19 @@ export const CanvasSearch: React.FC<CanvasSearchProps> = ({
           )}
         </div>
       ) : (
-        <button
-          onClick={open}
-          className="p-2.5 rounded-full bg-toolbar-bg border border-toolbar-border shadow-[0_8px_32px_-8px_hsl(var(--toolbar-shadow)/0.15)] hover:bg-muted transition-colors text-muted-foreground"
-          title="Search notes (Ctrl+F)"
-        >
-          <Search size={16} />
-        </button>
+        <TooltipProvider delayDuration={400}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={open}
+                className="p-2.5 rounded-full bg-toolbar-bg border border-toolbar-border shadow-[0_8px_32px_-8px_hsl(var(--toolbar-shadow)/0.15)] hover:bg-muted transition-colors text-muted-foreground"
+              >
+                <Search size={16} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="left">Search notes</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       )}
     </div>
   );
