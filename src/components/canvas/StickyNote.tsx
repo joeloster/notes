@@ -3,6 +3,7 @@ import { Note, NOTE_COLOR_MAP, NOTE_COLOR_RING_MAP, NOTE_COLORS, NoteColor, SNAP
 import { Trash2 } from 'lucide-react';
 import { NoteEditor } from './NoteEditor';
 import { Editor } from '@tiptap/react';
+import { isCheckboxInteractionTarget, isContentEditableTarget, isNoteControlTarget } from './noteInteractionUtils';
 
 interface StickyNoteProps {
   note: Note;
@@ -11,6 +12,7 @@ interface StickyNoteProps {
   isHighlighted?: boolean;
   isGroupSelected?: boolean;
   onSelect: () => void;
+  onClearGroupSelection?: () => void;
   onMove: (x: number, y: number) => void;
   onMoveEnd?: (x: number, y: number) => void;
   onGroupDragStart?: (noteId: string, startX: number, startY: number) => void;
@@ -21,22 +23,8 @@ interface StickyNoteProps {
   onEditingChange: (editing: boolean, editor: Editor | null) => void;
 }
 
-// --- Target detection helpers (inline for clarity) ---
-const isCheckbox = (el: HTMLElement) =>
-  el.closest('input[type="checkbox"]') !== null ||
-  Boolean(el.closest('label')?.querySelector('input[type="checkbox"]'));
-
-const isControl = (el: HTMLElement) =>
-  isCheckbox(el) ||
-  el.closest('button') !== null ||
-  el.closest('input') !== null ||
-  el.closest('[role="button"]') !== null;
-
-const isEditable = (el: HTMLElement) =>
-  el.closest('[contenteditable="true"]') !== null;
-
 export const StickyNote: React.FC<StickyNoteProps> = ({
-  note, scale, isSelected, isHighlighted, isGroupSelected, onSelect, onMove, onMoveEnd, onGroupDragStart, onResize, onResizeEnd, onUpdate, onDelete, onEditingChange,
+  note, scale, isSelected, isHighlighted, isGroupSelected, onSelect, onClearGroupSelection, onMove, onMoveEnd, onGroupDragStart, onResize, onResizeEnd, onUpdate, onDelete, onEditingChange,
 }) => {
   // --- Single source of truth ---
   const [isEditing, setIsEditing] = useState(false);
@@ -92,21 +80,33 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     const target = e.target as HTMLElement;
 
+    if (!isGroupSelected && onClearGroupSelection) {
+      onClearGroupSelection();
+    }
+
+    if (isGroupSelected && onGroupDragStart && !isNoteControlTarget(target)) {
+      e.stopPropagation();
+      (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+      didDrag.current = false;
+      onGroupDragStart(note.id, e.clientX, e.clientY);
+      return;
+    }
+
     // 1. Checkbox — let it through, block everything else
-    if (isCheckbox(target)) {
+    if (isCheckboxInteractionTarget(target)) {
       e.stopPropagation();
       return;
     }
 
     // 2. Contenteditable — allow text selection, no drag
-    if (isEditable(target)) {
+    if (isContentEditableTarget(target)) {
       e.stopPropagation();
       onSelect();
       return;
     }
 
     // 3. Buttons/inputs — let them handle themselves
-    if (isControl(target)) {
+    if (isNoteControlTarget(target)) {
       e.stopPropagation();
       return;
     }
@@ -117,15 +117,9 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
     onSelect();
     didDrag.current = false;
 
-    // If this note is part of a group selection, delegate drag to the group handler
-    if (isGroupSelected && onGroupDragStart) {
-      onGroupDragStart(note.id, e.clientX, e.clientY);
-      return;
-    }
-
     dragStart.current = { x: e.clientX, y: e.clientY, noteX: note.x, noteY: note.y };
     setIsDragging(true);
-  }, [note.x, note.y, onSelect, isGroupSelected, onGroupDragStart, note.id]);
+  }, [note.x, note.y, onSelect, isGroupSelected, onGroupDragStart, note.id, onClearGroupSelection]);
 
   /**
    * click on the note — enters edit mode if it was a clean click
@@ -134,7 +128,8 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
   const handleClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     if (didDrag.current) return;
-    if (isControl(target)) return;
+    if (isGroupSelected) return;
+    if (isNoteControlTarget(target)) return;
     if (isEditing) return;
 
     // Only enter edit mode if clicking in the editor scroll area
@@ -144,18 +139,19 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
       setIsEditing(true);
       requestAnimationFrame(() => editorRef.current?.commands.focus());
     }
-  }, [isEditing, onSelect]);
+  }, [isEditing, isGroupSelected, onSelect]);
 
   /**
    * Double-click — always enters edit mode (except on controls)
    */
   const handleDoubleClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (isControl(target)) return;
+    if (isGroupSelected) return;
+    if (isNoteControlTarget(target)) return;
     e.stopPropagation();
     setIsEditing(true);
     requestAnimationFrame(() => editorRef.current?.commands.focus());
-  }, []);
+  }, [isGroupSelected]);
 
   // --- Drag movement (window listeners using pointer events) ---
   useEffect(() => {

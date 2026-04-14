@@ -1,4 +1,13 @@
+import type { Note } from '@/types/canvas';
+
 const isHtmlElement = (target: EventTarget | null): target is HTMLElement => target instanceof HTMLElement;
+
+export interface SelectionBounds {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
 
 export const isCheckboxInteractionTarget = (target: EventTarget | null) => {
   if (!isHtmlElement(target)) return false;
@@ -33,3 +42,28 @@ export const getWheelDeltaMultiplier = (deltaMode: number, pageSize: number) => 
   if (deltaMode === 2) return pageSize;
   return 1;
 };
+
+export const getGroupSelectionBounds = (notes: Note[], selectedIds: Set<string>): SelectionBounds | null => {
+  const selectedNotes = notes.filter((note) => selectedIds.has(note.id));
+
+  if (selectedNotes.length === 0) return null;
+
+  const minX = Math.min(...selectedNotes.map((note) => note.x));
+  const minY = Math.min(...selectedNotes.map((note) => note.y));
+  const maxX = Math.max(...selectedNotes.map((note) => note.x + note.width));
+  const maxY = Math.max(...selectedNotes.map((note) => note.y + note.height));
+
+  return {
+    x: minX,
+    y: minY,
+    w: maxX - minX,
+    h: maxY - minY,
+  };
+};
+
+export const isPointWithinBounds = (x: number, y: number, bounds: SelectionBounds) => (
+  x >= bounds.x
+  && x <= bounds.x + bounds.w
+  && y >= bounds.y
+  && y <= bounds.y + bounds.h
+);
