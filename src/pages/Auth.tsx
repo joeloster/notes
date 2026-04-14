@@ -194,7 +194,7 @@ const Auth: React.FC = () => {
 
         {/* Bottom-right: blue with text */}
         <DecoNote
-          color="blue"
+          color="green"
           className="sm:hidden"
           style={{ bottom: '10%', right: '5%', width: 115, height: 75, transform: 'rotate(-2deg)' }}
         >
