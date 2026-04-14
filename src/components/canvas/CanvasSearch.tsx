@@ -32,7 +32,7 @@ function getMatchingWords(notes: Note[], query: string, limit = 3): string[] {
     // Split into words, find ones containing the query
     const words = text.split(/\s+/).filter(w => w.length > 0);
     for (const word of words) {
-      const clean = word.replace(/[^\w'-]/g, '');
+      const clean = word.replace(/[^\p{L}\p{N}'-]/gu, '');
       if (clean.length > 1 && clean.toLowerCase().includes(q) && clean.toLowerCase() !== q) {
         wordSet.add(clean);
         if (wordSet.size >= limit * 3) break; // collect extras for dedup
