@@ -26,7 +26,7 @@ const DecoNote: React.FC<DecoNoteProps> = ({ color, className = '', style, child
 
   return (
     <div
-      className={`absolute rounded-xl shadow-md ${colorMap[color]} ${className}`}
+      className={`absolute z-[2] rounded-xl shadow-md ${colorMap[color]} ${className}`}
       style={style}
     >
       {/* Header bar */}
@@ -97,7 +97,7 @@ const Auth: React.FC = () => {
         className="relative min-h-screen bg-canvas-bg flex items-center justify-center overflow-hidden"
         style={gridStyle}
       >
-        {/* Vignette overlay: fades grid into white at all edges */}
+        {/* Vignette overlay: fades grid into white at all edges — behind content */}
         <div
           className="pointer-events-none absolute inset-0 z-[1]"
           style={{
@@ -107,7 +107,7 @@ const Auth: React.FC = () => {
             `,
           }}
         />
-        {/* ── Decorative notes (sm+) ── */}
+        {/* ── Decorative notes (sm+) — above vignette ── */}
 
         {/* Top-left: yellow */}
         <DecoNote
@@ -244,7 +244,7 @@ const Auth: React.FC = () => {
         <button
           type="button"
           onClick={() => document.getElementById('auth-section')?.scrollIntoView({ behavior: 'smooth' })}
-          className="absolute bottom-6 inset-x-0 mx-auto w-fit flex flex-col items-center gap-1 text-muted-foreground/60 animate-bounce hover:text-muted-foreground transition-colors"
+          className="absolute bottom-6 inset-x-0 mx-auto w-fit z-[2] flex flex-col items-center gap-1 text-muted-foreground/60 animate-bounce hover:text-muted-foreground transition-colors"
         >
           <span className="text-xs">Sign in</span>
           <ChevronDown size={20} />
