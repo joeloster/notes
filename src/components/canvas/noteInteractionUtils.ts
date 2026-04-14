@@ -33,15 +33,6 @@ export const isContentEditableTarget = (target: EventTarget | null) => (
   isHtmlElement(target) && Boolean(target.closest('[contenteditable="true"]'))
 );
 
-export const isNoteEditorTarget = (target: EventTarget | null) => (
-  isHtmlElement(target) && Boolean(target.closest('[data-note-editor-scroll="true"]'))
-);
-
-export const getWheelDeltaMultiplier = (deltaMode: number, pageSize: number) => {
-  if (deltaMode === 1) return 16;
-  if (deltaMode === 2) return pageSize;
-  return 1;
-};
 
 export const getGroupSelectionBounds = (notes: Note[], selectedIds: Set<string>): SelectionBounds | null => {
   const selectedNotes = notes.filter((note) => selectedIds.has(note.id));
