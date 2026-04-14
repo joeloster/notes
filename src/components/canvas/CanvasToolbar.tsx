@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, ZoomIn, ZoomOut, LogOut, Hand, MousePointer2 } from 'lucide-react';
+import { Plus, ZoomIn, ZoomOut, LogOut, Hand, BoxSelect } from 'lucide-react';
 import { NoteColor, NOTE_COLORS } from '@/types/canvas';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -65,7 +65,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
           }`}
           title={isSelectMode ? 'Select mode (click to switch to pan)' : 'Pan mode (click to switch to select)'}
         >
-          {isSelectMode ? <MousePointer2 size={16} /> : <Hand size={16} />}
+          {isSelectMode ? <BoxSelect size={16} /> : <Hand size={16} />}
         </button>
 
         <div className="mx-0.5 h-8 w-px bg-border sm:mx-1" />

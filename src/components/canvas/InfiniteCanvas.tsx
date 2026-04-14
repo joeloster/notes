@@ -431,13 +431,19 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
 
         {selectedGroupBounds && !selectionRect && (
           <div
-            className="absolute rounded-2xl border-2 border-primary/70 bg-primary/10 pointer-events-none"
+            className="absolute rounded-2xl border-2 border-primary/70 bg-primary/10"
             style={{
               left: selectedGroupBounds.x,
               top: selectedGroupBounds.y,
               width: selectedGroupBounds.w,
               height: selectedGroupBounds.h,
-              zIndex: 9998,
+              zIndex: 9999,
+              cursor: isGroupDragging.current ? 'grabbing' : 'grab',
+              pointerEvents: 'auto',
+            }}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              handleGroupDragStart('', e.clientX, e.clientY);
             }}
           />
         )}
