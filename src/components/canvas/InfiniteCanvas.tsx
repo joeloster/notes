@@ -5,7 +5,8 @@ import { CanvasToolbar, InteractionMode } from './CanvasToolbar';
 import { CanvasSearch } from './CanvasSearch';
 import { MiniMap } from './MiniMap';
 import { NoteEditorToolbar } from './NoteEditorToolbar';
-import { GRID_SIZE, SNAP_GRID } from '@/types/canvas';
+import { GRID_SIZE } from '@/types/canvas';
+import { snapToGrid } from '@/lib/snapGrid';
 import { Editor } from '@tiptap/react';
 import { getGroupSelectionBounds, isPointWithinBounds } from './noteInteractionUtils';
 
@@ -145,7 +146,7 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
     isGroupDragging.current = true;
 
     let hasMoved = false;
-    const snap = (value: number) => Math.round(value / SNAP_GRID) * SNAP_GRID;
+    
 
     const handleMove = (e: PointerEvent) => {
       if (!groupDragRef.current) return;
@@ -171,8 +172,8 @@ export const InfiniteCanvas: React.FC<InfiniteCanvasProps> = ({ userId }) => {
         const positions: { id: string; x: number; y: number }[] = [];
 
         for (const [id, pos] of origPositions) {
-          const fx = snap(pos.x + dx);
-          const fy = snap(pos.y + dy);
+          const fx = snapToGrid(pos.x + dx);
+          const fy = snapToGrid(pos.y + dy);
           moveNote(id, fx, fy);
           positions.push({ id, x: fx, y: fy });
         }
