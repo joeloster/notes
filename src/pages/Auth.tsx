@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Eye, EyeOff, Infinity, Layout, Move, ChevronDown, Trash2 } from 'lucide-react';
-import { NoteColor } from '@/types/canvas';
+import { NoteColor, NOTE_COLOR_MAP } from '@/types/canvas';
 
 /* ── Decorative sticky note ── */
 interface DecoNoteProps {
@@ -16,17 +16,9 @@ interface DecoNoteProps {
 }
 
 const DecoNote: React.FC<DecoNoteProps> = ({ color, className = '', style, children, large }) => {
-  const colorMap: Record<NoteColor, string> = {
-    yellow: 'bg-note-yellow',
-    blue: 'bg-note-blue',
-    green: 'bg-note-green',
-    pink: 'bg-note-pink',
-    purple: 'bg-note-purple',
-  };
-
   return (
     <div
-      className={`absolute z-[2] rounded-xl shadow-md ${colorMap[color]} ${className}`}
+      className={`absolute z-[2] rounded-xl shadow-md ${NOTE_COLOR_MAP[color]} ${className}`}
       style={style}
     >
       {/* Header bar */}

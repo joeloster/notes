@@ -1,10 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Note, NoteColor, ViewState, DEFAULT_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT, SNAP_GRID } from '@/types/canvas';
+import { Note, NoteColor, ViewState, DEFAULT_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT } from '@/types/canvas';
 import { supabase } from '@/integrations/supabase/client';
-
-function snapToGrid(value: number): number {
-  return Math.round(value / SNAP_GRID) * SNAP_GRID;
-}
+import { snapToGrid } from '@/lib/snapGrid';
 
 export function useCanvasState(userId: string) {
   const [notes, setNotes] = useState<Note[]>([]);

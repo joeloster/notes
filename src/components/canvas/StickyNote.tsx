@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Note, NOTE_COLOR_MAP, NOTE_COLOR_RING_MAP, NOTE_COLORS, NoteColor, SNAP_GRID } from '@/types/canvas';
+import { Note, NOTE_COLOR_MAP, NOTE_COLOR_RING_MAP, NOTE_COLORS, NoteColor } from '@/types/canvas';
+import { snapToGrid } from '@/lib/snapGrid';
 import { Trash2 } from 'lucide-react';
 import { NoteEditor } from './NoteEditor';
 import { Editor } from '@tiptap/react';
@@ -175,11 +176,10 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
     };
     const handleUp = () => {
       if (didDrag.current) {
-        const snap = (v: number) => Math.round(v / SNAP_GRID) * SNAP_GRID;
         const rawX = dragStart.current.noteX + (lastMouse.current.x - dragStart.current.x) / scale;
         const rawY = dragStart.current.noteY + (lastMouse.current.y - dragStart.current.y) / scale;
-        const finalX = snap(rawX);
-        const finalY = snap(rawY);
+        const finalX = snapToGrid(rawX);
+        const finalY = snapToGrid(rawY);
         onMove(finalX, finalY);
         onMoveEnd?.(finalX, finalY);
       }
