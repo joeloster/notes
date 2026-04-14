@@ -227,7 +227,7 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
     <div
       className={`absolute select-none rounded-xl ${isDragging ? '' : 'transition-all duration-200'} ${NOTE_COLOR_MAP[note.color]} ${
         isSelected ? `ring-2 ${NOTE_COLOR_RING_MAP[note.color]} shadow-lg` : 'shadow-md'
-      } ${isHighlighted && !isSelected ? 'ring-2 ring-primary/60 shadow-lg shadow-primary/20' : ''} ${isGroupSelected && !isSelected ? 'ring-2 ring-primary/40 shadow-md' : ''} ${isDragging && didDrag.current ? 'cursor-grabbing z-50 shadow-xl' : 'cursor-grab z-10'}`}
+      } ${isHighlighted && !isSelected ? 'ring-2 ring-primary/60 shadow-lg shadow-primary/20' : ''} ${isGroupSelected && !isSelected ? 'ring-2 ring-primary/40 shadow-md' : ''} ${isGroupSelected ? 'pointer-events-none' : ''} ${isDragging && didDrag.current ? 'cursor-grabbing z-50 shadow-xl' : 'cursor-grab z-10'}`}
       style={{
         left: note.x,
         top: note.y,
