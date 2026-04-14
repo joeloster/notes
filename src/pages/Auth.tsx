@@ -231,14 +231,18 @@ const Auth: React.FC = () => {
         </DecoNote>
 
         {/* Scroll indicator */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 text-muted-foreground/60 animate-bounce">
+        <button
+          type="button"
+          onClick={() => document.getElementById('auth-section')?.scrollIntoView({ behavior: 'smooth' })}
+          className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 text-muted-foreground/60 animate-bounce hover:text-muted-foreground transition-colors"
+        >
           <span className="text-xs">Sign in</span>
           <ChevronDown size={20} />
-        </div>
+        </button>
       </section>
 
       {/* ═══════ AUTH SECTION ═══════ */}
-      <section className="min-h-screen bg-background flex items-center justify-center px-6 py-12">
+      <section id="auth-section" className="min-h-screen bg-background flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm space-y-6">
           <div className="space-y-1">
             <h2 className="text-2xl font-bold text-foreground">
