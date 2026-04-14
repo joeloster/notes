@@ -185,20 +185,27 @@ const Auth: React.FC = () => {
           <p className="text-[10px] text-foreground/60">Ideas 💡</p>
         </DecoNote>
 
-        {/* Left-mid: green, overlapping hero slightly */}
+        {/* Bottom-left: empty yellow */}
+        <DecoNote
+          color="yellow"
+          className="sm:hidden"
+          style={{ bottom: '14%', left: '6%', width: 100, height: 65, transform: 'rotate(3deg)' }}
+        />
+
+        {/* Bottom-right: blue with text */}
+        <DecoNote
+          color="blue"
+          className="sm:hidden"
+          style={{ bottom: '10%', right: '5%', width: 115, height: 75, transform: 'rotate(-2deg)' }}
+        >
+          <p className="text-[10px] text-foreground/60">Meeting @ 3pm 📅</p>
+        </DecoNote>
+
+        {/* Bottom-center: tiny green, empty */}
         <DecoNote
           color="green"
           className="sm:hidden"
-          style={{ top: '32%', left: '-2%', width: 105, height: 75, transform: 'rotate(2deg)', zIndex: 5 }}
-        >
-          <p className="text-[10px] text-foreground/60">Gym @ 6pm 💪</p>
-        </DecoNote>
-
-        {/* Right-mid: purple, peeking behind hero */}
-        <DecoNote
-          color="purple"
-          className="sm:hidden"
-          style={{ top: '38%', right: '-3%', width: 115, height: 80, transform: 'rotate(-3deg)', zIndex: 5 }}
+          style={{ bottom: '22%', left: '35%', width: 85, height: 55, transform: 'rotate(1deg)' }}
         />
 
 
