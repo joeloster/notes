@@ -303,16 +303,23 @@ export const StickyNote: React.FC<StickyNoteProps> = ({
         />
       </div>
 
-      {/* Resize handle */}
-      <div
-        className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize opacity-0 hover:opacity-100 transition-opacity"
-        style={{ touchAction: 'none' }}
-        onPointerDown={handleResizeStart}
-      >
-        <svg viewBox="0 0 16 16" className="w-full h-full text-foreground/20">
-          <path d="M14 14L8 14L14 8Z" fill="currentColor" />
-        </svg>
-      </div>
+      {/* Resize handles — all four corners */}
+      {(['se', 'sw', 'ne', 'nw'] as const).map((corner) => {
+        const pos = {
+          se: 'bottom-0 right-0 cursor-se-resize',
+          sw: 'bottom-0 left-0 cursor-sw-resize',
+          ne: 'top-0 right-0 cursor-ne-resize',
+          nw: 'top-0 left-0 cursor-nw-resize',
+        }[corner];
+        return (
+          <div
+            key={corner}
+            className={`absolute ${pos} w-4 h-4 opacity-0 hover:opacity-100 transition-opacity`}
+            style={{ touchAction: 'none' }}
+            onPointerDown={handleResizeStart(corner)}
+          />
+        );
+      })}
     </div>
   );
 };
