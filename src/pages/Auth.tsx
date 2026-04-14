@@ -97,7 +97,7 @@ const Auth: React.FC = () => {
         className="relative min-h-screen bg-canvas-bg flex items-center justify-center overflow-hidden"
         style={gridStyle}
       >
-        {/* Vignette overlay: fades grid into white at all edges */}
+        {/* Vignette overlay: fades grid into white at all edges — behind content */}
         <div
           className="pointer-events-none absolute inset-0 z-[1]"
           style={{
@@ -107,7 +107,7 @@ const Auth: React.FC = () => {
             `,
           }}
         />
-        {/* ── Decorative notes (sm+) ── */}
+        {/* ── Decorative notes (sm+) — above vignette ── */}
 
         {/* Top-left: yellow */}
         <DecoNote
